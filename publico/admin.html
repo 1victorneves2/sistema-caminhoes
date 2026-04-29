@@ -131,6 +131,8 @@
     <div id="viagens" class="tab-content">
       <h2>Gerenciar Viagens</h2>
       
+      <button onclick="abrirModalCriarViagemAdmin()" style="margin-bottom: 20px; padding: 13px 26px; border: none; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: #0a0f1f; box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);">➕ Criar Nova Viagem</button>
+      
       <div class="filtros" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 20px;">
         <input type="text" id="filtroViagemBusca" placeholder="Buscar por ID, placa, rota..." onkeyup="buscarViagensAdmin()" style="background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
         <input type="date" id="dataInicioAdmin" onchange="buscarViagensPorDataAdmin()" style="background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
@@ -138,7 +140,7 @@
         <select id="filtroStatusViagem" onchange="carregarViagensAdmin()" style="background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
           <option value="">Todos os status</option>
           <option value="carregado">Carregado</option>
-          <option value="saiu_para_entrega">Saiu para Entrega</option>
+          <option value="em_rota">Em Rota</option>
           <option value="entregue">Entregue</option>
           <option value="retorno_problema">Retorno com Problema</option>
         </select>
@@ -256,7 +258,55 @@
     </div>
   </div>
 
-  <!-- MODAL ATUALIZAR VIAGEM -->
+  <!-- MODAL CRIAR VIAGEM -->
+  <div id="modalCriarViagemAdmin" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 2rem; font-size: 24px; color: #60a5fa; text-transform: uppercase;">➕ Criar Nova Viagem</h3>
+      
+      <div class="form-group">
+        <label>Caminhão</label>
+        <select id="caminhaoCriarAdmin" style="width: 100%; background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
+          <option value="">Selecione o caminhão</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Motorista</label>
+        <select id="motoristaCriarAdmin" style="width: 100%; background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
+          <option value="">Selecione o motorista</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Funcionário</label>
+        <select id="funcionarioCriarAdmin" style="width: 100%; background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
+          <option value="">Selecione o funcionário</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Rota</label>
+        <input type="text" id="rotaCriarAdmin" placeholder="Ex: São Paulo - Rio de Janeiro" style="width: 100%; background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
+      </div>
+
+      <div class="form-group">
+        <label>Mercadoria</label>
+        <input type="text" id="mercadoriaCriarAdmin" placeholder="Ex: Eletrônicos" style="width: 100%; background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
+      </div>
+
+      <div class="form-group">
+        <label>Nota Fiscal</label>
+        <input type="text" id="notaFiscalCriarAdmin" placeholder="Ex: NF-001" style="width: 100%; background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 12px 16px; border-radius: 10px; font-size: 14px;">
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-salvar" onclick="salvarViagemAdmin()">Criar Viagem</button>
+        <button class="btn-cancelar" onclick="fecharModal('modalCriarViagemAdmin')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ATUALIZAR STATUS VIAGEM -->
   <div id="modalStatusViagem" class="modal">
     <div class="modal-content">
       <h3>Atualizar Status da Viagem</h3>
@@ -675,9 +725,102 @@ function deletarFuncionario(id) {
 }
 
 // ========================================
-// VIAGENS (NOVO)
+// VIAGENS - CRIAR (NOVO)
 // ========================================
-function carregarViagensAdmin() {
+function abrirModalCriarViagemAdmin() {
+  document.getElementById('modalCriarViagemAdmin').classList.add('ativo');
+  carregarSelectsAdmin();
+}
+
+function carregarSelectsAdmin() {
+  Promise.all([
+    fetch('/api/caminhoes', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.json(); }),
+    fetch('/api/motoristas', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.json(); }),
+    fetch('/api/funcionarios', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.json(); })
+  ]).then(function(results) {
+    var caminhoes = results[0];
+    var motoristas = results[1];
+    var funcionarios = results[2];
+    
+    var selCaminhao = document.getElementById('caminhaoCriarAdmin');
+    var selMotorista = document.getElementById('motoristaCriarAdmin');
+    var selFuncionario = document.getElementById('funcionarioCriarAdmin');
+
+    selCaminhao.innerHTML = '<option value="">Selecione o caminhão</option>';
+    caminhoes.forEach(function(c) {
+      if (c.status === 'disponivel') {
+        selCaminhao.innerHTML += '<option value="' + c.id + '">' + c.placa + ' (' + c.tipo + ')</option>';
+      }
+    });
+
+    selMotorista.innerHTML = '<option value="">Selecione o motorista</option>';
+    motoristas.forEach(function(m) {
+      selMotorista.innerHTML += '<option value="' + m.id + '">' + m.nome + '</option>';
+    });
+
+    selFuncionario.innerHTML = '<option value="">Selecione o funcionário</option>';
+    funcionarios.forEach(function(f) {
+      selFuncionario.innerHTML += '<option value="' + f.id + '">' + f.nome + ' (' + f.funcao + ')</option>';
+    });
+  });
+}
+
+function salvarViagemAdmin() {
+  var caminhao_id = document.getElementById('caminhaoCriarAdmin').value;
+  var motorista_id = document.getElementById('motoristaCriarAdmin').value;
+  var funcionario_id = document.getElementById('funcionarioCriarAdmin').value;
+  var rota = document.getElementById('rotaCriarAdmin').value;
+  var mercadoria = document.getElementById('mercadoriaCriarAdmin').value;
+  var nota_fiscal = document.getElementById('notaFiscalCriarAdmin').value;
+
+  if (!caminhao_id || !motorista_id || !funcionario_id || !rota || !mercadoria || !nota_fiscal) {
+    alert('Preencha todos os campos!');
+    return;
+  }
+
+  fetch('/api/viagens', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({ 
+      caminhao_id: parseInt(caminhao_id), 
+      motorista_id: parseInt(motorista_id), 
+      funcionario_id: parseInt(funcionario_id), 
+      rota: rota, 
+      mercadoria: mercadoria, 
+      nota_fiscal: nota_fiscal 
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.erro) {
+      alert(data.erro);
+      return;
+    }
+    fecharModal('modalCriarViagemAdmin');
+    document.getElementById('caminhaoCriarAdmin').value = '';
+    document.getElementById('motoristaCriarAdmin').value = '';
+    document.getElementById('funcionarioCriarAdmin').value = '';
+    document.getElementById('rotaCriarAdmin').value = '';
+    document.getElementById('mercadoriaCriarAdmin').value = '';
+    document.getElementById('notaFiscalCriarAdmin').value = '';
+    mostrarNotificacao('✅ Viagem criada com sucesso!');
+    carregarViagensAdmin();
+  });
+}
+
+function limparFiltrosViagens() {
+  document.getElementById('filtroViagemBusca').value = '';
+  document.getElementById('dataInicioAdmin').value = '';
+  document.getElementById('dataFimAdmin').value = '';
+  document.getElementById('filtroStatusViagem').value = '';
+  carregarViagensAdmin();
+}
+
+// ========================================
+// VIAGENS - CARREGAR E EXIBIR (ATUALIZADO)
   fetch('/api/viagens', { headers: { 'Authorization': 'Bearer ' + token } })
   .then(function(r) { return r.json(); })
   .then(function(viagens) {
