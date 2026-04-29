@@ -821,6 +821,8 @@ function limparFiltrosViagens() {
 
 // ========================================
 // VIAGENS - CARREGAR E EXIBIR (ATUALIZADO)
+// ========================================
+function carregarViagensAdmin() {
   fetch('/api/viagens', { headers: { 'Authorization': 'Bearer ' + token } })
   .then(function(r) { return r.json(); })
   .then(function(viagens) {
