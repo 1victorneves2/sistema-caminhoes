@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
@@ -14,15 +14,123 @@
     <h1>Controle de Caminhões</h1>
     <div class="nav-links">
       <a href="index.html" class="ativo">Dashboard</a>
+      <a href="caminhoes.html">Caminhões</a>
+      <a href="viagens.html">Viagens</a>
+      <a href="carregamentos.html">Carregamentos</a>
+      <a href="estatisticas.html">Estatísticas</a>
+      <a href="mapa.html">Mapa GPS</a>
+      <a href="historico.html">Histórico</a>
       <a href="admin.html" id="linkAdmin" style="display: none;">Admin</a>
       <a href="login.html" id="linkLogin">Login</a>
       <a href="#" id="linkSair" style="display: none;">Sair</a>
     </div>
   </nav>
 
+  <style>
+    /* ---- Seção tempo real ---- */
+    .rt-section {
+      margin-top: 2.5rem;
+    }
+    .rt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .rt-header h2 { margin-bottom: 0; }
+    .rt-status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .rt-online  { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+    .rt-offline { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3);  }
+
+    .rt-lista {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .rt-card {
+      background: linear-gradient(135deg, #141a2f 0%, #1a2240 100%);
+      border: 1px solid rgba(37,99,235,0.15);
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: center;
+      transition: border-color 0.3s;
+    }
+    .rt-card.chegou  { border-color: rgba(245,158,11,0.5);  }
+    .rt-card.entregue{ border-color: rgba(16,185,129,0.5);  }
+    .rt-card.problema{ border-color: rgba(239,68,68,0.4);   }
+    .rt-card.concluido{border-color: rgba(100,116,139,0.3); opacity: 0.7; }
+
+    .rt-id {
+      background: rgba(37,99,235,0.15);
+      color: #60a5fa;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-weight: 800;
+      font-size: 15px;
+      white-space: nowrap;
+    }
+    .rt-info { }
+    .rt-motorista { font-size: 14px; font-weight: 700; color: #e0e7ff; }
+    .rt-detalhes  { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .rt-ultima-acao {
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .rt-progresso-wrap {
+      grid-column: 1 / -1;
+      height: 5px;
+      background: #1e293b;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .rt-progresso-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      border-radius: 5px;
+      transition: width 0.5s ease;
+    }
+
+    .rt-feed {
+      background: linear-gradient(135deg, #0d1220 0%, #141a2f 100%);
+      border: 1px solid rgba(37,99,235,0.12);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .rt-feed-titulo { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+    .rt-evento {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(37,99,235,0.06);
+      font-size: 13px;
+    }
+    .rt-evento:last-child { border-bottom: none; }
+    .rt-evento-icon { font-size: 15px; flex-shrink: 0; }
+    .rt-evento-texto { color: #94a3b8; }
+    .rt-evento-texto strong { color: #e0e7ff; }
+    .rt-evento-hora { font-size: 11px; color: #475569; margin-left: auto; white-space: nowrap; }
+  </style>
+
   <main>
     <h2>Dashboard de Operações</h2>
-    
+
     <div class="cards">
       <div class="card">
         <h3>Caminhões Disponíveis</h3>
@@ -42,7 +150,25 @@
       </div>
     </div>
 
-    <h2>Viagens Ativas</h2>
+    <!-- ===== ENTREGAS EM TEMPO REAL ===== -->
+    <div class="rt-section">
+      <div class="rt-header">
+        <h2>Entregas em Tempo Real</h2>
+        <span id="rtStatusBadge" class="rt-status-badge rt-offline">● Desconectado</span>
+      </div>
+
+      <div id="rtLista" class="rt-lista">
+        <div style="color:#64748b;font-size:14px;padding:1rem 0;">Carregando carregamentos ativos...</div>
+      </div>
+
+      <!-- Feed de eventos -->
+      <div class="rt-feed" id="rtFeed">
+        <div class="rt-feed-titulo">Feed de Eventos</div>
+        <div id="rtEventos"><div style="color:#475569;font-size:13px;">Aguardando eventos...</div></div>
+      </div>
+    </div>
+
+    <h2 style="margin-top: 2.5rem;">Viagens Ativas</h2>
     <table>
       <thead>
         <tr>
@@ -63,10 +189,14 @@
 const token = localStorage.getItem('token');
 const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
 
+if (!token) {
+  window.location.href = 'login.html';
+}
+
 if (token && usuario) {
   document.getElementById('linkLogin').style.display = 'none';
   document.getElementById('linkSair').style.display = 'block';
-  
+
   if (usuario.role === 'admin') {
     document.getElementById('linkAdmin').style.display = 'block';
   }
@@ -78,6 +208,8 @@ document.getElementById('linkSair').onclick = function(e) {
   e.preventDefault();
   localStorage.removeItem('token');
   localStorage.removeItem('usuario');
+  localStorage.removeItem('empresa_id');
+  document.cookie = 'token=; path=/; max-age=0';
   window.location.href = 'login.html';
 };
 

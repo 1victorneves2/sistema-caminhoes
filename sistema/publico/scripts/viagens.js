@@ -1,151 +1,70 @@
-let caminhoes = [];
-let motoristas = [];
-let funcionarios = [];
+// viagens.js — redireciona para a API de carregamentos
+// A tabela "viagens" foi renomeada para "carregamentos".
+// Este arquivo mantém compatibilidade com qualquer código que ainda importe viagens.js.
 
-function carregarDados() {
-  Promise.all([
-    fetch('/api/caminhoes').then(r => r.json()),
-    fetch('/api/motoristas').then(r => r.json()),
-    fetch('/api/funcionarios').then(r => r.json()),
-    fetch('/api/viagens').then(r => r.json())
-  ]).then(([c, m, f, v]) => {
-    caminhoes = c;
-    motoristas = m;
-    funcionarios = f;
-    
-    preencherSelects();
-    carregarViagens();
-  });
-}
-
-function preencherSelects() {
-  const selCaminhao = document.getElementById('caminhao');
-  const selMotorista = document.getElementById('motorista');
-  const selFuncionario = document.getElementById('funcionario');
-
-  selCaminhao.innerHTML = '<option value="">Selecione o caminhão</option>';
-  caminhoes.forEach(c => {
-    if (c.status === 'disponivel') {
-      selCaminhao.innerHTML += `<option value="${c.id}">${c.placa} - ${c.tipo}</option>`;
+function fetchComToken(url, options = {}) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = '/login.html';
+    return Promise.resolve(null);
+  }
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...options.headers
+  };
+  return fetch(url, { ...options, headers }).then(response => {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuario');
+      localStorage.removeItem('empresa_id');
+      document.cookie = 'token=; path=/; max-age=0';
+      alert('Sessão expirada. Faça login novamente.');
+      window.location.href = '/login.html';
+      return null;
     }
-  });
-
-  selMotorista.innerHTML = '<option value="">Selecione o motorista</option>';
-  motoristas.forEach(m => {
-    selMotorista.innerHTML += `<option value="${m.id}">${m.nome}</option>`;
-  });
-
-  selFuncionario.innerHTML = '<option value="">Selecione o funcionário</option>';
-  funcionarios.forEach(f => {
-    selFuncionario.innerHTML += `<option value="${f.id}">${f.nome}</option>`;
+    return response;
   });
 }
 
-function carregarViagens() {
-  fetch('/api/viagens')
-    .then(res => res.json())
-    .then(viagens => {
-      const tbody = document.getElementById('listaViagens');
+function carregarCarregamentos() {
+  fetchComToken('/api/carregamentos')
+    .then(r => r && r.json())
+    .then(data => {
+      if (!data) return;
+      const lista = data.dados || [];
+      const tbody = document.getElementById('listaViagens') || document.getElementById('tabelaViagens');
+      if (!tbody) return;
       tbody.innerHTML = '';
-      
-      viagens.forEach(v => {
-        let acoes = '';
-        if (v.status === 'carregado') {
-          acoes = `<button class="pequeno" onclick="marcarSaida(${v.id})">Saiu</button>`;
-        } else if (v.status === 'saiu_para_entrega') {
-          acoes = `
-            <button class="pequeno" onclick="marcarEntregue(${v.id})">Entregue</button>
-            <button class="pequeno" onclick="marcarProblema(${v.id})">Problema</button>
-          `;
-        }
+
+      if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#94a3b8;">Nenhum carregamento registrado.</td></tr>';
+        return;
+      }
+
+      lista.forEach(c => {
+        const statusBg = {
+          carregado: 'background:rgba(245,158,11,0.2);color:#fbbf24;',
+          em_rota:   'background:rgba(37,99,235,0.2);color:#60a5fa;',
+          entregue:  'background:rgba(16,185,129,0.2);color:#10b981;',
+          concluido: 'background:rgba(100,116,139,0.2);color:#94a3b8;'
+        }[c.status] || '';
 
         tbody.innerHTML += `
-          <tr>
-            <td>${v.id}</td>
-            <td>${v.placa}</td>
-            <td>${v.motorista}</td>
-            <td>${v.rota}</td>
-            <td><span class="status-badge status-${v.status}">${v.status}</span></td>
-            <td>${acoes}</td>
-          </tr>
-        `;
+          <tr style="border-top:1px solid rgba(37,99,235,0.1);">
+            <td style="padding:1.25rem;color:#e0e7ff;">${c.id}</td>
+            <td style="padding:1.25rem;color:#e0e7ff;">${c.placa || '—'}</td>
+            <td style="padding:1.25rem;color:#e0e7ff;">${c.motorista_nome || '—'}</td>
+            <td style="padding:1.25rem;color:#e0e7ff;">${c.conferente_nome || '—'}</td>
+            <td style="padding:1.25rem;"><span class="status-badge" style="${statusBg}">${c.status.replace(/_/g,' ').toUpperCase()}</span></td>
+            <td style="padding:1.25rem;color:#e0e7ff;">${c.data_saida ? c.data_saida.substring(0,10) : '—'}</td>
+            <td style="padding:1.25rem;"></td>
+          </tr>`;
       });
     });
 }
 
-function cadastrarViagem() {
-  const caminhao_id = document.getElementById('caminhao').value;
-  const motorista_id = document.getElementById('motorista').value;
-  const funcionario_id = document.getElementById('funcionario').value;
-  const rota = document.getElementById('rota').value;
-  const mercadoria = document.getElementById('mercadoria').value;
-  const nota_fiscal = document.getElementById('nota_fiscal').value;
+// Alias para código legado que ainda chama carregarViagens()
+const carregarViagens = carregarCarregamentos;
 
-  if (!caminhao_id || !motorista_id || !funcionario_id || !rota || !mercadoria || !nota_fiscal) {
-    alert('Todos os campos são obrigatórios!');
-    return;
-  }
-
-  fetch('/api/viagens', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ caminhao_id: parseInt(caminhao_id), motorista_id: parseInt(motorista_id), funcionario_id: parseInt(funcionario_id), rota, mercadoria, nota_fiscal })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.erro) {
-      alert(data.erro);
-      return;
-    }
-    alert('Viagem registrada com sucesso!');
-    document.getElementById('caminhao').value = '';
-    document.getElementById('motorista').value = '';
-    document.getElementById('funcionario').value = '';
-    document.getElementById('rota').value = '';
-    document.getElementById('mercadoria').value = '';
-    document.getElementById('nota_fiscal').value = '';
-    carregarDados();
-  });
-}
-
-function marcarSaida(id) {
-  fetch(`/api/viagens/${id}`, {
-    method: 'PUT',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ status: 'saiu_para_entrega' })
-  })
-  .then(res => res.json())
-  .then(() => carregarViagens());
-}
-
-function marcarEntregue(id) {
-  fetch(`/api/viagens/${id}`, {
-    method: 'PUT',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ status: 'entregue' })
-  })
-  .then(res => res.json())
-  .then(() => carregarViagens());
-}
-
-function marcarProblema(id) {
-  const motivo = prompt('Qual o motivo do problema?');
-  const conferente = prompt('Quem fez a conferência?');
-  
-  if (motivo && conferente) {
-    fetch(`/api/viagens/${id}`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ 
-        status: 'retorno_problema',
-        motivo_retorno: motivo,
-        conferente_retorno: conferente,
-        observacoes_retorno: ''
-      })
-    })
-    .then(res => res.json())
-    .then(() => carregarViagens());
-  }
-}
-
-carregarDados();
+carregarCarregamentos();

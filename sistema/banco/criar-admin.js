@@ -1,6 +1,6 @@
 require('dotenv').config();
-const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -9,35 +9,38 @@ const pool = new Pool({
 
 async function criarAdmin() {
   try {
-    // Dados do admin
-    const email = 'admin@example.com';
-    const senha = 'admin123'; // Trocar em produção!
-    const nome = 'Administrador';
+    const tabelaExiste = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'usuarios'
+      )
+    `);
 
-    // Hash da senha
+    if (!tabelaExiste.rows[0].exists) {
+      console.error('❌ Tabela "usuarios" não encontrada no banco de dados.');
+      process.exit(1);
+    }
+
+    const email = 'admin@sistema.com';
+    const nome = 'Admin do Sistema';
+    const senha = 'admin123';
     const senhaHash = await bcrypt.hash(senha, 10);
 
-    // Inserir admin
-    const result = await pool.query(
+    await pool.query(
       `INSERT INTO usuarios (email, senha, nome, role, ativo)
        VALUES ($1, $2, $3, 'admin', true)
-       RETURNING id, email, nome, role`,
+       ON CONFLICT (email) DO UPDATE SET senha = EXCLUDED.senha, nome = EXCLUDED.nome`,
       [email, senhaHash, nome]
     );
 
-    console.log('✅ Admin criado com sucesso!');
-    console.log('Email:', result.rows[0].email);
-    console.log('Nome:', result.rows[0].nome);
-    console.log('Role:', result.rows[0].role);
-    console.log('\n⚠️ Altere a senha padrão após o primeiro login!');
+    console.log('✅ Usuário admin criado/atualizado!');
+    console.log('Email:', email);
+    console.log('Nome:', nome);
+    console.log('Senha:', senha);
 
     process.exit(0);
   } catch (erro) {
-    if (erro.code === '23505') {
-      console.error('❌ Erro: Email já existe no banco de dados');
-    } else {
-      console.error('❌ Erro ao criar admin:', erro.message);
-    }
+    console.error('❌ Erro:', erro.message);
     process.exit(1);
   }
 }

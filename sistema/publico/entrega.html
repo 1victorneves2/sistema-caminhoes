@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Entrega</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: #0a0f1f;
+      color: #e0e7ff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ---- Header ---- */
+    header {
+      background: linear-gradient(135deg, #0a0f1f 0%, #141a2f 100%);
+      border-bottom: 1px solid rgba(37,99,235,0.2);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 { font-size: 16px; font-weight: 800; color: #60a5fa; text-transform: uppercase; letter-spacing: 2px; }
+    #nomeUsuario { font-size: 13px; color: #94a3b8; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #btnSair {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    /* ---- Status WS ---- */
+    #statusWS {
+      padding: 6px 16px;
+      font-size: 11px;
+      text-align: center;
+      background: rgba(239,68,68,0.1);
+      color: #fca5a5;
+      border-bottom: 1px solid rgba(239,68,68,0.15);
+    }
+    #statusWS.conectado { background: rgba(16,185,129,0.1); color: #6ee7b7; border-color: rgba(16,185,129,0.15); }
+
+    /* ---- Conteúdo ---- */
+    main { padding: 16px; max-width: 480px; margin: 0 auto; }
+
+    /* ---- Tela: lista de carregamentos ---- */
+    #telaLista h2 { font-size: 18px; margin-bottom: 16px; color: #93c5fd; }
+
+    .card-carreg {
+      background: linear-gradient(135deg, #141a2f 0%, #1a2240 100%);
+      border: 1px solid rgba(37,99,235,0.2);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card-carreg-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .card-carreg-id { font-size: 18px; font-weight: 800; color: #60a5fa; }
+    .badge-status {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .s-carregado { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .s-em_rota   { background: rgba(245,158,11,0.2); color: #fbbf24; }
+    .s-entregue  { background: rgba(16,185,129,0.2); color: #34d399; }
+
+    .card-info { font-size: 14px; color: #94a3b8; margin-bottom: 6px; }
+    .card-info strong { color: #e0e7ff; }
+
+    .progresso-mini {
+      height: 6px;
+      background: #1e293b;
+      border-radius: 6px;
+      margin: 12px 0;
+      overflow: hidden;
+    }
+    .progresso-mini-bar { height: 100%; background: linear-gradient(90deg,#10b981,#34d399); border-radius: 6px; transition: width 0.4s; }
+
+    .btn-iniciar {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+      color: #0a0f1f;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 8px;
+    }
+
+    /* ---- Tela de entrega ---- */
+    #telaEntrega { display: none; }
+
+    .entrega-header {
+      background: linear-gradient(135deg, #141a2f 0%, #1a2240 100%);
+      border: 1px solid rgba(37,99,235,0.2);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .entrega-titulo { font-size: 20px; font-weight: 800; color: #60a5fa; margin-bottom: 8px; }
+    .entrega-info   { font-size: 13px; color: #94a3b8; margin-bottom: 10px; }
+
+    .progresso-bar-wrap { margin: 8px 0 4px; }
+    .progresso-bar-bg {
+      height: 14px;
+      background: #1e293b;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progresso-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+    .progresso-pct { font-size: 13px; font-weight: 700; color: #10b981; text-align: right; margin-top: 4px; }
+
+    .btn-cheguei {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+      color: #0a0f1f;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .btn-cheguei:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ---- Cards de nota ---- */
+    .nota-card {
+      background: linear-gradient(135deg, #0f1623 0%, #141a2f 100%);
+      border: 1px solid rgba(37,99,235,0.12);
+      border-radius: 12px;
+      padding: 14px 14px 12px;
+      margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+    .nota-card.status-entregue       { border-color: rgba(16,185,129,0.4);  background: linear-gradient(135deg,#071a11,#0d2016); }
+    .nota-card.status-problema        { border-color: rgba(239,68,68,0.4);   background: linear-gradient(135deg,#1a0808,#240e0e); }
+    .nota-card.status-nao_encontrado  { border-color: rgba(245,158,11,0.4);  background: linear-gradient(135deg,#1a1008,#24160a); }
+    .nota-card.status-devolucao_parcial{border-color: rgba(168,85,247,0.4);  background: linear-gradient(135deg,#140b1a,#1c1024); }
+    .nota-card.status-sac             { border-color: rgba(59,130,246,0.4);  background: linear-gradient(135deg,#080f1a,#0d1524); }
+    .nota-card.status-realocado       { border-color: rgba(100,116,139,0.3); opacity: 0.6; }
+
+    .nota-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .nota-numero { font-size: 15px; font-weight: 800; color: #e0e7ff; }
+    .nota-status-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 16px;
+    }
+    .nota-desc { font-size: 12px; color: #64748b; margin-bottom: 10px; }
+
+    .nota-acoes {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .btn-nota {
+      padding: 12px 4px;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      cursor: pointer;
+      text-align: center;
+      line-height: 1;
+      transition: transform 0.1s, opacity 0.1s;
+    }
+    .btn-nota:active { transform: scale(0.92); opacity: 0.8; }
+    .btn-nota span { display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; margin-top: 3px; color: inherit; letter-spacing: 0.3px; }
+    .btn-entregue    { background: rgba(16,185,129,0.2);  color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+    .btn-problema-n  { background: rgba(239,68,68,0.2);   color: #ef4444; border: 1px solid rgba(239,68,68,0.3);  }
+    .btn-devolucao   { background: rgba(168,85,247,0.2);  color: #a855f7; border: 1px solid rgba(168,85,247,0.3);}
+    .btn-sac         { background: rgba(59,130,246,0.2);  color: #3b82f6; border: 1px solid rgba(59,130,246,0.3);}
+
+    /* ---- Modal motivo ---- */
+    .modal-motivo {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 500;
+      display: none;
+      justify-content: flex-end;
+      align-items: flex-end;
+    }
+    .modal-motivo.ativo { display: flex; }
+    .modal-motivo-box {
+      background: linear-gradient(135deg, #141a2f 0%, #1e2847 100%);
+      border: 1px solid rgba(37,99,235,0.2);
+      border-radius: 20px 20px 0 0;
+      padding: 24px 20px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .modal-motivo-box h4 { font-size: 16px; color: #60a5fa; margin-bottom: 14px; }
+    .modal-motivo-box textarea {
+      width: 100%;
+      background: rgba(10,15,31,0.8);
+      border: 1.5px solid rgba(37,99,235,0.2);
+      color: #e0e7ff;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      resize: none;
+      height: 100px;
+      font-family: inherit;
+    }
+    .modal-motivo-box textarea:focus { outline: none; border-color: rgba(37,99,235,0.5); }
+    .modal-motivo-btns { display: flex; gap: 10px; margin-top: 14px; }
+    .modal-motivo-btns button {
+      flex: 1;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .btn-confirmar { background: linear-gradient(135deg,#2563eb,#3b82f6); color: #0a0f1f; }
+    .btn-cancelar2 { background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+
+    /* ---- Botão finalizar ---- */
+    .btn-finalizar-entrega {
+      width: 100%;
+      padding: 20px;
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: #0a0f1f;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 16px 0;
+    }
+    .btn-finalizar-entrega:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-voltar {
+      background: rgba(100,116,139,0.15);
+      border: 1px solid rgba(100,116,139,0.2);
+      color: #94a3b8;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #e0e7ff;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 1000;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      animation: fadeUp 0.3s ease;
+      white-space: nowrap;
+    }
+    .toast.ok    { background: #065f46; color: #6ee7b7; }
+    .toast.erro  { background: #7f1d1d; color: #fca5a5; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* ---- Carregando ---- */
+    .loading { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>📦 Entrega</h1>
+      <div id="nomeUsuario">—</div>
+    </div>
+    <button id="btnSair" onclick="sair()">Sair</button>
+  </header>
+
+  <div id="statusWS">⚡ Conectando ao servidor...</div>
+
+  <main>
+    <!-- TELA 1: lista de carregamentos -->
+    <div id="telaLista">
+      <h2>Meus Carregamentos</h2>
+      <div id="listaCarregamentos"><div class="loading">Carregando...</div></div>
+    </div>
+
+    <!-- TELA 2: notas do carregamento -->
+    <div id="telaEntrega">
+      <button class="btn-voltar" onclick="voltarLista()">← Voltar</button>
+
+      <div class="entrega-header">
+        <div id="entregaTitulo" class="entrega-titulo">Carregamento #—</div>
+        <div id="entregaInfo" class="entrega-info">—</div>
+        <div class="progresso-bar-wrap">
+          <div class="progresso-bar-bg">
+            <div id="progressoFill" class="progresso-bar-fill" style="width:0%"></div>
+          </div>
+          <div id="progressoPct" class="progresso-pct">0%</div>
+        </div>
+      </div>
+
+      <button id="btnCheguei" class="btn-cheguei" onclick="marcarChegada()">
+        📍 Cheguei no Local
+      </button>
+
+      <div id="listaNota"><div class="loading">Carregando notas...</div></div>
+
+      <button id="btnFinalizar" class="btn-finalizar-entrega" onclick="tentarFinalizar()" disabled>
+        ✔ Finalizar Entrega
+      </button>
+    </div>
+  </main>
+
+  <!-- MODAL MOTIVO -->
+  <div id="modalMotivo" class="modal-motivo">
+    <div class="modal-motivo-box">
+      <h4 id="modalMotivotitulo">Informe o motivo</h4>
+      <textarea id="inputMotivo" placeholder="Descreva o problema ou motivo..."></textarea>
+      <div class="modal-motivo-btns">
+        <button class="btn-cancelar2" onclick="fecharModalMotivo()">Cancelar</button>
+        <button class="btn-confirmar" id="btnConfirmarMotivo">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ============================================================
+  // STATE
+  // ============================================================
+  const token    = localStorage.getItem('token');
+  const usuario  = JSON.parse(localStorage.getItem('usuario') || 'null');
+
+  if (!token) { window.location.href = 'login.html'; }
+
+  document.getElementById('nomeUsuario').textContent = usuario?.nome || '—';
+
+  let carregamentoAtivo = null;
+  let ws = null;
+  let _motivoCallback = null;
+  let _gpsWatchId = null;
+  let _caminhaoAtivoId = null;
+
+  // ============================================================
+  // HELPERS
+  // ============================================================
+
+  function fetchComToken(url, opts = {}) {
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...opts.headers };
+    return fetch(url, { ...opts, headers }).then(r => {
+      if (r.status === 401) { alert('Sessão expirada.'); sair(); return null; }
+      return r;
+    });
+  }
+
+  function toast(msg, tipo = '') {
+    const t = document.createElement('div');
+    t.className = `toast ${tipo}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2800);
+  }
+
+  function sair() {
+    if (ws) ws.close();
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('empresa_id');
+    document.cookie = 'token=; path=/; max-age=0';
+    window.location.href = 'login.html';
+  }
+
+  // ============================================================
+  // WEBSOCKET
+  // ============================================================
+
+  function conectarWS() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}?token=${encodeURIComponent(token)}`);
+
+    ws.onopen = () => {
+      document.getElementById('statusWS').textContent = '● Conectado em tempo real';
+      document.getElementById('statusWS').classList.add('conectado');
+    };
+
+    ws.onclose = () => {
+      document.getElementById('statusWS').textContent = '⚡ Desconectado — reconectando...';
+      document.getElementById('statusWS').classList.remove('conectado');
+      setTimeout(conectarWS, 4000);
+    };
+
+    ws.onerror = () => {};
+
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.tipo === 'PONG') ws.send(JSON.stringify({ tipo: 'PONG' }));
+      } catch (_) {}
+    };
+  }
+
+  function enviarWS(dados) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(dados));
+    }
+  }
+
+  // ============================================================
+  // TELA 1: LISTA DE CARREGAMENTOS
+  // ============================================================
+
+  async function carregarLista() {
+    const resp = await fetchComToken('/api/entregas/ativas');
+    if (!resp) return;
+    const data = await resp.json();
+    const lista = data.dados || [];
+
+    const el = document.getElementById('listaCarregamentos');
+
+    if (lista.length === 0) {
+      el.innerHTML = '<div class="loading">Nenhum carregamento ativo no momento.</div>';
+      return;
+    }
+
+    el.innerHTML = lista.map(c => {
+      const total    = parseInt(c.total_notas)    || 0;
+      const entregue = parseInt(c.notas_entregues)|| 0;
+      const pct = total > 0 ? Math.round((entregue / total) * 100) : 0;
+      const badgeClass = { carregado: 's-carregado', em_rota: 's-em_rota', entregue: 's-entregue' }[c.status] || 's-carregado';
+      return `
+        <div class="card-carreg">
+          <div class="card-carreg-header">
+            <div class="card-carreg-id">Carregamento #${c.id}</div>
+            <span class="badge-status ${badgeClass}">${c.status.replace('_',' ')}</span>
+          </div>
+          <div class="card-info">🚛 <strong>${c.placa || '—'}</strong> — ${c.tipo || ''}</div>
+          <div class="card-info">👤 Motorista: <strong>${c.motorista_nome || '—'}</strong></div>
+          <div class="card-info">📋 Notas: <strong>${total}</strong> | Entregues: <strong>${entregue}</strong></div>
+          <div class="progresso-mini">
+            <div class="progresso-mini-bar" style="width:${pct}%"></div>
+          </div>
+          <button class="btn-iniciar" onclick="abrirEntrega(${c.id})">Iniciar Entrega →</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ============================================================
+  // TELA 2: ENTREGA
+  // ============================================================
+
+  async function abrirEntrega(id) {
+    carregamentoAtivo = id;
+
+    // Descobrir caminhao_id do carregamento para o GPS
+    const rd = await fetchComToken('/api/entregas/ativas');
+    if (rd) {
+      const d = await rd.json();
+      const c = (d.dados || []).find(x => x.id === id);
+      if (c) _caminhaoAtivoId = c.caminhao_id || null;
+    }
+
+    document.getElementById('telaLista').style.display = 'none';
+    document.getElementById('telaEntrega').style.display = 'block';
+    document.getElementById('entregaTitulo').textContent = `Carregamento #${id}`;
+    document.getElementById('btnCheguei').disabled = false;
+    iniciarGPS();
+    await recarregarNotas();
+  }
+
+  function voltarLista() {
+    pararGPS();
+    carregamentoAtivo = null;
+    _caminhaoAtivoId = null;
+    document.getElementById('telaEntrega').style.display = 'none';
+    document.getElementById('telaLista').style.display = 'block';
+    carregarLista();
+  }
+
+  // ============================================================
+  // GPS
+  // ============================================================
+
+  function iniciarGPS() {
+    if (!navigator.geolocation) return;
+    pararGPS();
+    _gpsWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, speed, accuracy } = pos.coords;
+        enviarWS({
+          tipo: 'GPS',
+          caminhao_id: _caminhaoAtivoId,
+          carregamento_id: carregamentoAtivo,
+          lat: latitude,
+          lng: longitude,
+          velocidade: speed ? Math.round(speed * 3.6) : null, // m/s → km/h
+          precisao: accuracy ? Math.round(accuracy) : null
+        });
+      },
+      (err) => console.warn('GPS indisponível:', err.message),
+      { enableHighAccuracy: true, maximumAge: 20000, timeout: 15000 }
+    );
+  }
+
+  function pararGPS() {
+    if (_gpsWatchId !== null) {
+      navigator.geolocation.clearWatch(_gpsWatchId);
+      _gpsWatchId = null;
+    }
+  }
+
+  async function recarregarNotas() {
+    const id = carregamentoAtivo;
+    const resp = await fetchComToken(`/api/entregas/${id}/notas`);
+    if (!resp) return;
+    const data = await resp.json();
+    const notas = data.dados || [];
+
+    const total    = notas.length;
+    const entregue = notas.filter(n => ['entregue','realocado'].includes(n.status)).length;
+    const pendente = notas.filter(n => n.status === 'pendente').length;
+    const pct = total > 0 ? Math.round((entregue / total) * 100) : 0;
+
+    document.getElementById('entregaInfo').textContent = `${total} notas — ${entregue} entregues`;
+    document.getElementById('progressoFill').style.width = pct + '%';
+    document.getElementById('progressoPct').textContent = pct + '%';
+
+    const btnFin = document.getElementById('btnFinalizar');
+    btnFin.disabled = total === 0 || pendente > 0;
+
+    const statusCor = {
+      pendente:         { bg:'rgba(71,85,105,0.15)',  cor:'#94a3b8',  texto:'Pendente' },
+      entregue:         { bg:'rgba(16,185,129,0.15)', cor:'#10b981',  texto:'Entregue' },
+      problema:         { bg:'rgba(239,68,68,0.15)',  cor:'#ef4444',  texto:'Problema' },
+      nao_encontrado:   { bg:'rgba(245,158,11,0.15)', cor:'#f59e0b',  texto:'Não Enc.' },
+      devolucao_parcial:{ bg:'rgba(168,85,247,0.15)', cor:'#a855f7',  texto:'Devol.' },
+      sac:              { bg:'rgba(59,130,246,0.15)', cor:'#60a5fa',  texto:'SAC' },
+      realocado:        { bg:'rgba(100,116,139,0.15)',cor:'#64748b',  texto:'Realocado' }
+    };
+
+    const el = document.getElementById('listaNota');
+    if (notas.length === 0) {
+      el.innerHTML = '<div class="loading">Nenhuma nota neste carregamento.</div>';
+      return;
+    }
+
+    el.innerHTML = notas.map(n => {
+      const enc = statusCor[n.status] || statusCor.pendente;
+      const finalizado = ['entregue','realocado'].includes(n.status);
+      return `
+        <div class="nota-card status-${n.status}" id="nota-${n.id}">
+          <div class="nota-header">
+            <div class="nota-numero">${n.numero_nota}</div>
+            <span class="nota-status-badge" style="background:${enc.bg};color:${enc.cor};">${enc.texto}</span>
+          </div>
+          ${n.descricao ? `<div class="nota-desc">${n.descricao}${n.observacoes ? ' — <em>' + n.observacoes + '</em>' : ''}</div>` : ''}
+          ${!finalizado ? `
+          <div class="nota-acoes">
+            <button class="btn-nota btn-entregue"   onclick="atualizarNota(${n.id},'entregue',null)">
+              ✅<span>Entregue</span>
+            </button>
+            <button class="btn-nota btn-problema-n" onclick="pedirMotivo(${n.id},'problema','⚠️ Problema')">
+              ⚠️<span>Problema</span>
+            </button>
+            <button class="btn-nota btn-devolucao"  onclick="pedirMotivo(${n.id},'devolucao_parcial','↩️ Devolução')">
+              ↩️<span>Devol.</span>
+            </button>
+            <button class="btn-nota btn-sac"        onclick="pedirMotivo(${n.id},'sac','📞 SAC')">
+              📞<span>SAC</span>
+            </button>
+          </div>
+          ` : `<div style="font-size:12px;color:#64748b;padding:4px 0;">Encerrada</div>`}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ============================================================
+  // AÇÕES
+  // ============================================================
+
+  async function marcarChegada() {
+    const btn = document.getElementById('btnCheguei');
+    btn.disabled = true;
+
+    const resp = await fetchComToken(`/api/entregas/${carregamentoAtivo}/chegou`, { method: 'PUT' });
+    if (!resp) { btn.disabled = false; return; }
+    const data = await resp.json();
+
+    if (data.erro) { toast(data.erro, 'erro'); btn.disabled = false; return; }
+
+    btn.textContent = '✅ Localização registrada';
+    btn.style.opacity = '0.5';
+    toast('Chegada registrada!', 'ok');
+
+    enviarWS({ tipo: 'CHEGOU_LOCAL', carregamento_id: carregamentoAtivo, timestamp: new Date().toISOString() });
+  }
+
+  async function atualizarNota(nota_id, status, motivo) {
+    const resp = await fetchComToken(
+      `/api/entregas/${carregamentoAtivo}/notas/${nota_id}`,
+      { method: 'PUT', body: JSON.stringify({ status, motivo }) }
+    );
+    if (!resp) return;
+    const data = await resp.json();
+    if (data.erro) { toast(data.erro, 'erro'); return; }
+
+    enviarWS({
+      tipo: 'NOTA_ATUALIZADA',
+      carregamento_id: carregamentoAtivo,
+      nota_id,
+      status,
+      timestamp: new Date().toISOString()
+    });
+
+    await recarregarNotas();
+  }
+
+  function pedirMotivo(nota_id, status, titulo) {
+    document.getElementById('modalMotivotitulo').textContent = titulo;
+    document.getElementById('inputMotivo').value = '';
+    document.getElementById('modalMotivo').classList.add('ativo');
+    _motivoCallback = (motivo) => atualizarNota(nota_id, status, motivo);
+    document.getElementById('btnConfirmarMotivo').onclick = () => {
+      const motivo = document.getElementById('inputMotivo').value.trim();
+      fecharModalMotivo();
+      _motivoCallback(motivo);
+    };
+  }
+
+  function fecharModalMotivo() {
+    document.getElementById('modalMotivo').classList.remove('ativo');
+    _motivoCallback = null;
+  }
+
+  async function tentarFinalizar() {
+    // Verificar se há notas com problema
+    const resp = await fetchComToken(`/api/entregas/${carregamentoAtivo}/notas`);
+    if (!resp) return;
+    const data = await resp.json();
+    const notas = data.dados || [];
+
+    const comProblema = notas.filter(n => ['problema','nao_encontrado','devolucao_parcial','sac'].includes(n.status));
+
+    if (comProblema.length > 0) {
+      const transferir = confirm(
+        `Há ${comProblema.length} nota(s) com ocorrência.\n\nDeseja transferir para um novo carregamento SAC antes de finalizar?\n\n[OK] = Finalizar direto\n[Cancelar] = Voltar`
+      );
+      if (!transferir) return;
+      await finalizarEntrega(null);
+    } else {
+      if (!confirm(`Finalizar carregamento #${carregamentoAtivo}?`)) return;
+      await finalizarEntrega(null);
+    }
+  }
+
+  async function finalizarEntrega(transferir_para) {
+    const body = transferir_para ? { transferir_para } : {};
+    const resp = await fetchComToken(
+      `/api/entregas/${carregamentoAtivo}/finalizar`,
+      { method: 'POST', body: JSON.stringify(body) }
+    );
+    if (!resp) return;
+    const data = await resp.json();
+
+    if (data.erro) { toast(data.erro, 'erro'); return; }
+
+    enviarWS({ tipo: 'CARREGAMENTO_FINALIZADO', carregamento_id: carregamentoAtivo, timestamp: new Date().toISOString() });
+    pararGPS();
+    toast('Entrega finalizada com sucesso!', 'ok');
+    setTimeout(voltarLista, 1500);
+  }
+
+  // ============================================================
+  // INIT
+  // ============================================================
+
+  conectarWS();
+  carregarLista();
+  </script>
+</body>
+</html>

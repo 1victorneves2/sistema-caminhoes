@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
@@ -171,8 +171,10 @@
     <div class="nav-links">
       <a href="index.html">Dashboard</a>
       <a href="caminhoes.html">Caminhões</a>
-      <a href="motoristas.html">Motoristas</a>
       <a href="viagens.html">Viagens</a>
+      <a href="carregamentos.html">Carregamentos</a>
+      <a href="estatisticas.html">Estatísticas</a>
+      <a href="mapa.html">Mapa GPS</a>
       <a href="historico.html" class="ativo">Histórico</a>
       <a href="admin.html" id="linkAdmin" style="display: none;">Admin</a>
       <a href="login.html" id="linkLogin">Login</a>
@@ -193,12 +195,13 @@
         <input type="date" id="dataFim">
       </div>
       <div style="flex: 1; min-width: 150px;">
-        <label class="label-filtro">Tipo</label>
+        <label class="label-filtro">Tabela</label>
         <select id="filtroTipo">
-          <option value="">Todos os Tipos</option>
-          <option value="viagem">Viagens</option>
-          <option value="caminhao">Caminhões</option>
-          <option value="motorista">Motoristas</option>
+          <option value="">Todas</option>
+          <option value="viagens">Viagens</option>
+          <option value="caminhoes">Caminhões</option>
+          <option value="motoristas">Motoristas</option>
+          <option value="funcionarios">Funcionários</option>
         </select>
       </div>
       <button class="btn-pesquisar-historico" onclick="pesquisarHistorico()">
@@ -303,7 +306,7 @@ function pesquisarHistorico() {
   
   if (dataInicio) params.append('dataInicio', dataInicio);
   if (dataFim) params.append('dataFim', dataFim);
-  if (tipo) params.append('tipo', tipo);
+  if (tipo) params.append('tabela', tipo);
 
   if (params.toString()) {
     url += '?' + params.toString();
@@ -360,6 +363,7 @@ function carregarHistoricoInicial() {
 }
 
 carregarHistoricoInicial();
+pesquisarHistorico();
 
 // Permitir Enter para pesquisar
 document.getElementById('dataFim').addEventListener('keypress', (e) => {

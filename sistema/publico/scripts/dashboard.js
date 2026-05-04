@@ -1,8 +1,37 @@
+function fetchComToken(url, options = {}) {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    window.location.href = '/login.html';
+    return Promise.resolve(null);
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...options.headers
+  };
+
+  return fetch(url, { ...options, headers }).then(response => {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuario');
+      localStorage.removeItem('empresa_id');
+      document.cookie = 'token=; path=/; max-age=0';
+      window.location.href = '/login.html';
+      return null;
+    }
+    return response;
+  });
+}
+
 function atualizarDashboard() {
   Promise.all([
-    fetch('/api/caminhoes').then(r => r.json()),
-    fetch('/api/viagens').then(r => r.json())
+    fetchComToken('/api/caminhoes').then(r => r && r.json()),
+    fetchComToken('/api/viagens').then(r => r && r.json())
   ]).then(([caminhoes, viagens]) => {
+    if (!caminhoes || !viagens) return;
+
     const disponveis = caminhoes.filter(c => c.status === 'disponivel').length;
     const emRota = viagens.filter(v => v.status === 'saiu_para_entrega').length;
     const entregues = viagens.filter(v => v.status === 'entregue').length;

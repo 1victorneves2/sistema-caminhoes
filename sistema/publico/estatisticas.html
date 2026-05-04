@@ -1,0 +1,362 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estatísticas - Controle de Caminhões</title>
+  <link rel="stylesheet" href="style_ultra_profissional.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ---- Filtros ---- */
+    .filtros-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: linear-gradient(135deg, #141a2f 0%, #1e2847 100%);
+      border: 1px solid rgba(37,99,235,0.15);
+      border-radius: 14px;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .btn-filtro {
+      padding: 10px 22px;
+      border: 1.5px solid rgba(37,99,235,0.3);
+      border-radius: 9px;
+      background: transparent;
+      color: #93c5fd;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.2s;
+    }
+    .btn-filtro:hover { background: rgba(37,99,235,0.15); }
+    .btn-filtro.ativo {
+      background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+      color: #0a0f1f;
+      border-color: transparent;
+    }
+    .filtro-sep {
+      width: 1px;
+      height: 32px;
+      background: rgba(37,99,235,0.2);
+    }
+    .filtro-input {
+      background: rgba(10,15,31,0.6);
+      border: 1.5px solid rgba(37,99,235,0.2);
+      color: #e0e7ff;
+      padding: 10px 14px;
+      border-radius: 9px;
+      font-size: 13px;
+    }
+    .filtro-input:focus { outline: none; border-color: rgba(37,99,235,0.5); }
+
+    /* ---- Cards de resumo ---- */
+    .cards-resumo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 2rem;
+    }
+    .card-stat {
+      background: linear-gradient(135deg, #141a2f 0%, #1a2240 100%);
+      border: 1px solid rgba(37,99,235,0.15);
+      border-radius: 14px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .card-verde   { border-color: rgba(16,185,129,0.3); background: linear-gradient(135deg,#0a1f18,#0f2a1f); }
+    .card-vermelho{ border-color: rgba(239,68,68,0.3);  background: linear-gradient(135deg,#1f0a0a,#2a0f0f); }
+    .card-icon { font-size: 28px; margin-bottom: 8px; }
+    .card-num  { font-size: 38px; font-weight: 800; color: #e0e7ff; line-height: 1; }
+    .card-pct  { font-size: 16px; font-weight: 700; color: #60a5fa; margin-top: 4px; }
+    .card-lbl  { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-top: 8px; font-weight: 700; }
+    .card-verde   .card-num { color: #10b981; }
+    .card-vermelho .card-num { color: #ef4444; }
+
+    /* ---- Seção de gráficos ---- */
+    .graficos-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 20px;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 900px) {
+      .graficos-grid { grid-template-columns: 1fr; }
+    }
+    .grafico-box {
+      background: linear-gradient(135deg, #0d1220 0%, #141a2f 100%);
+      border: 1px solid rgba(37,99,235,0.15);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+    .grafico-box h4 {
+      color: #93c5fd;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 1.2rem;
+    }
+    .grafico-wrap {
+      position: relative;
+      height: 300px;
+    }
+
+    /* ---- Tabela ---- */
+    .tabela-box {
+      background: linear-gradient(135deg, #0d1220 0%, #141a2f 100%);
+      border: 1px solid rgba(37,99,235,0.15);
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+    }
+    .tabela-box h4 {
+      color: #93c5fd;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 1.2rem;
+    }
+    .tabela-box table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .tabela-box th {
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #60a5fa;
+      background: rgba(37,99,235,0.1);
+      font-weight: 700;
+    }
+    .tabela-box td {
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #e0e7ff;
+      border-bottom: 1px solid rgba(37,99,235,0.06);
+    }
+    .tabela-box tr:last-child td { border-bottom: none; }
+    .tabela-box tr:hover td { background: rgba(37,99,235,0.05); }
+
+    /* ---- Download buttons ---- */
+    .download-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .btn-download {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-png { background: linear-gradient(135deg,#2563eb,#3b82f6); color: #0a0f1f; }
+    .btn-csv { background: linear-gradient(135deg,#059669,#10b981); color: #0a0f1f; }
+    .btn-png:hover, .btn-csv:hover { opacity: 0.9; }
+
+    /* ---- Erro ---- */
+    #mensagemErro {
+      display: none;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+      padding: 12px 18px;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="background-canvas"></canvas>
+
+  <nav>
+    <h1>Controle de Caminhões</h1>
+    <div class="nav-links">
+      <a href="index.html">Dashboard</a>
+      <a href="caminhoes.html">Caminhões</a>
+      <a href="viagens.html">Viagens</a>
+      <a href="carregamentos.html">Carregamentos</a>
+      <a href="historico.html">Histórico</a>
+      <a href="estatisticas.html" class="ativo">Estatísticas</a>
+      <a href="admin.html" id="linkAdmin" style="display:none;">Admin</a>
+      <a href="#" id="linkSair" style="display:none;">Sair</a>
+    </div>
+  </nav>
+
+  <main>
+    <h2>Estatísticas de Entregas</h2>
+
+    <!-- FILTROS -->
+    <div class="filtros-bar">
+      <button id="btnHoje"   class="btn-filtro" onclick="selecionarHoje()">Hoje</button>
+      <button id="btnSemana" class="btn-filtro" onclick="selecionarSemana()">Semana</button>
+      <button id="btnMes"    class="btn-filtro" onclick="selecionarMes()">Mês</button>
+
+      <div class="filtro-sep"></div>
+
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:11px;color:#64748b;text-transform:uppercase;">Dia específico</label>
+        <input type="date" id="inputData" class="filtro-input"
+          onchange="definirAbaBotoes('hoje'); carregarEstatisticasDia(this.value)">
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label style="font-size:11px;color:#64748b;text-transform:uppercase;">Mês</label>
+        <select id="selMes" class="filtro-input" onchange="selecionarMes()"></select>
+      </div>
+    </div>
+
+    <!-- ERRO -->
+    <div id="mensagemErro"></div>
+
+    <!-- CARDS -->
+    <div class="cards-resumo">
+      <div id="cardCarregamentos"></div>
+      <div id="cardNotas"></div>
+      <div id="cardEntregues"></div>
+      <div id="cardProblemas"></div>
+    </div>
+
+    <!-- BOTÕES DOWNLOAD -->
+    <div class="download-bar">
+      <button class="btn-download btn-png" onclick="downloadPNG()">
+        🖼 Baixar Gráfico (PNG)
+      </button>
+      <button class="btn-download btn-csv" onclick="downloadCSV()">
+        📊 Exportar CSV
+      </button>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div class="graficos-grid">
+      <div class="grafico-box">
+        <h4>Distribuição de Status</h4>
+        <div class="grafico-wrap">
+          <canvas id="graficoPizza"></canvas>
+        </div>
+      </div>
+      <div id="secaoBarras" class="grafico-box" style="display:none;">
+        <h4>Notas por Dia</h4>
+        <div class="grafico-wrap">
+          <canvas id="graficoBarras"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABELA DETALHADA -->
+    <div class="tabela-box">
+      <h4>Detalhamento Diário</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Carregamentos</th>
+            <th>Total Notas</th>
+            <th>Entregues</th>
+            <th>Problema</th>
+            <th>Não Enc.</th>
+            <th>% Entrega</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaEstatisticas"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+  // Auth guard
+  const _token = localStorage.getItem('token');
+  const _usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+  if (!_token) window.location.href = 'login.html';
+  if (_usuario?.role === 'admin') document.getElementById('linkAdmin').style.display = 'block';
+
+  document.getElementById('linkSair').style.display = 'block';
+  document.getElementById('linkSair').onclick = (e) => {
+    e.preventDefault();
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('empresa_id');
+    document.cookie = 'token=; path=/; max-age=0';
+    window.location.href = 'login.html';
+  };
+
+  // Interceptor 401
+  (function() {
+    const _fetch = window.fetch;
+    window.fetch = function(...args) {
+      return _fetch.apply(this, args).then(response => {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('usuario');
+          localStorage.removeItem('empresa_id');
+          document.cookie = 'token=; path=/; max-age=0';
+          alert('Sessão expirada. Faça login novamente.');
+          window.location.href = 'login.html';
+        }
+        return response;
+      });
+    };
+  }());
+
+  // Canvas animado
+  (function() {
+    const canvas = document.getElementById('background-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const particles = [];
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 3 + 1;
+        this.speedX = (Math.random() - 0.5) * 0.8;
+        this.speedY = (Math.random() - 0.5) * 0.8;
+        this.opacity = Math.random() * 0.7 + 0.3;
+      }
+      update() {
+        this.x += this.speedX; this.y += this.speedY;
+        if (this.x > canvas.width)  this.x = 0;
+        if (this.x < 0)             this.x = canvas.width;
+        if (this.y > canvas.height) this.y = 0;
+        if (this.y < 0)             this.y = canvas.height;
+      }
+      draw() {
+        ctx.fillStyle = `rgba(37,99,235,${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    for (let i = 0; i < 120; i++) particles.push(new Particle());
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(animate);
+    }
+    animate();
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  }());
+  </script>
+
+  <script src="scripts/estatisticas.js"></script>
+</body>
+</html>

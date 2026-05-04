@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
@@ -39,6 +39,12 @@
     <h1>Painel Administrativo</h1>
     <div style="display: flex; gap: 15px; align-items: center;">
       <a href="index.html">Dashboard</a>
+      <a href="caminhoes.html">Caminhões</a>
+      <a href="viagens.html">Viagens</a>
+      <a href="carregamentos.html">Carregamentos</a>
+      <a href="estatisticas.html">Estatísticas</a>
+      <a href="mapa.html">Mapa GPS</a>
+      <a href="historico.html">Histórico</a>
       <span style="color: #60a5fa; font-weight: 600; padding: 8px 16px;" id="usuarioNome">Admin</span>
       <a href="#" onclick="logout(); return false;" style="color: #e2e8f0;">Sair</a>
     </div>
@@ -47,11 +53,11 @@
   <main>
     <div class="tabs">
       <button class="ativo" onclick="abrirAba('caminhoes')">Caminhões</button>
-      <button onclick="abrirAba('motoristas')">Motoristas</button>
       <button onclick="abrirAba('funcionarios')">Funcionários</button>
       <button onclick="abrirAba('viagens')">Viagens</button>
       <button onclick="abrirAba('historico')">Histórico</button>
       <button onclick="abrirAba('notas')">Relatório de Notas</button>
+      <button onclick="abrirAba('financeiro'); carregarPainelFinanceiro()">💰 Financeiro</button>
     </div>
 
     <!-- CAMINHÕES -->
@@ -84,13 +90,20 @@
       </table>
     </div>
 
-    <!-- MOTORISTAS -->
-    <div id="motoristas" class="tab-content">
-      <h2>Gerenciar Motoristas</h2>
-      <button onclick="abrirModalMotorista()" style="margin-bottom: 20px;">Novo Motorista</button>
-      
+    <!-- FUNCIONÁRIOS (inclui Motoristas após migração) -->
+    <div id="funcionarios" class="tab-content">
+      <h2>Gerenciar Funcionários</h2>
+      <button onclick="abrirModalFuncionario()" style="margin-bottom: 20px;">Novo Funcionário</button>
+
       <div class="filtros">
-        <input type="text" id="filtroMotorista" placeholder="Filtrar por nome" onkeyup="carregarMotoristas()">
+        <select id="filtroFuncao" onchange="carregarFuncionarios()" style="background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 10px 14px; border-radius: 10px; font-size: 14px;">
+          <option value="">Todos os tipos</option>
+          <option value="Motorista">Motoristas</option>
+          <option value="Conferente">Conferentes</option>
+          <option value="Carregador">Carregadores</option>
+          <option value="Administrativo">Administrativos</option>
+          <option value="Gerente">Gerentes</option>
+        </select>
       </div>
 
       <table>
@@ -99,27 +112,7 @@
             <th>ID</th>
             <th>Nome</th>
             <th>CPF</th>
-            <th>Contato</th>
-            <th>Ativo</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaMotoristas"></tbody>
-      </table>
-    </div>
-
-    <!-- FUNCIONÁRIOS -->
-    <div id="funcionarios" class="tab-content">
-      <h2>Gerenciar Funcionários</h2>
-      <button onclick="abrirModalFuncionario()" style="margin-bottom: 20px;">Novo Funcionário</button>
-      
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>CPF</th>
-            <th>Função</th>
+            <th>Função / Tipo</th>
             <th>Ativo</th>
             <th>Ações</th>
           </tr>
@@ -265,6 +258,51 @@
         </table>
       </div>
     </div>
+
+    <!-- PAINEL FINANCEIRO -->
+    <div id="financeiro" class="tab-content">
+      <h2>Painel Financeiro</h2>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem;">
+        <button onclick="carregarPainelFinanceiro('pronto_financeiro')"  style="padding:10px 18px;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">✓ Prontos</button>
+        <button onclick="carregarPainelFinanceiro('enviado_financeiro')" style="padding:10px 18px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">→ Enviados</button>
+        <button onclick="carregarPainelFinanceiro('aprovado')"           style="padding:10px 18px;background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">✅ Aprovados</button>
+        <button onclick="carregarPainelFinanceiro('rejeitado')"          style="padding:10px 18px;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">✗ Rejeitados</button>
+        <button onclick="carregarPainelFinanceiro()"                     style="padding:10px 18px;background:rgba(37,99,235,0.15);color:#60a5fa;border:1px solid rgba(37,99,235,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">Todos</button>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;">
+            <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">ID</th>
+            <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Caminhão</th>
+            <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Motorista</th>
+            <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Notas</th>
+            <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Entregues</th>
+            <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Realocadas</th>
+            <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Status Fin.</th>
+            <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaFinanceiro"></tbody>
+      </table>
+    </div>
+
+    <!-- MODAL REJEITAR -->
+    <div id="modalRejeitar" style="position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;display:none;justify-content:center;align-items:center;backdrop-filter:blur(6px);">
+      <div style="background:linear-gradient(135deg,#0a0f1f,#141a2f);padding:2.5rem;border-radius:14px;width:90%;max-width:480px;border:1px solid rgba(239,68,68,0.3);">
+        <h3 style="color:#ef4444;margin-bottom:1.5rem;font-size:20px;text-transform:uppercase;">✗ Rejeitar Carregamento</h3>
+        <input type="hidden" id="idRejeitar">
+        <div style="margin-bottom:1.2rem;">
+          <label style="display:block;font-size:12px;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;">Motivo da rejeição</label>
+          <textarea id="motivoRejeitar" rows="3" placeholder="Descreva o motivo..." style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(239,68,68,0.3);color:#e0e7ff;padding:12px;border-radius:10px;font-size:14px;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button onclick="document.getElementById('modalRejeitar').style.display='none'" style="padding:11px 22px;background:rgba(100,116,139,0.2);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);border-radius:9px;font-weight:700;cursor:pointer;">Cancelar</button>
+          <button onclick="confirmarRejeitar()" style="padding:11px 22px;background:linear-gradient(135deg,#dc2626,#ef4444);color:white;border:none;border-radius:9px;font-weight:700;cursor:pointer;text-transform:uppercase;">Confirmar Rejeição</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <!-- MODAL CAMINHÃO -->
@@ -292,30 +330,6 @@
     </div>
   </div>
 
-  <!-- MODAL MOTORISTA -->
-  <div id="modalMotorista" class="modal">
-    <div class="modal-content">
-      <h3 id="tituloMotorista">Novo Motorista</h3>
-      <input type="hidden" id="idMotoristaEdicao">
-      <div class="form-group">
-        <label>Nome</label>
-        <input type="text" id="nomeMotorista">
-      </div>
-      <div class="form-group">
-        <label>CPF</label>
-        <input type="text" id="cpfMotorista">
-      </div>
-      <div class="form-group">
-        <label>Contato</label>
-        <input type="text" id="contatoMotorista">
-      </div>
-      <div class="modal-buttons">
-        <button class="btn-salvar" onclick="salvarMotorista()">Salvar</button>
-        <button class="btn-cancelar" onclick="fecharModal('modalMotorista')">Cancelar</button>
-      </div>
-    </div>
-  </div>
-
   <!-- MODAL FUNCIONÁRIO -->
   <div id="modalFuncionario" class="modal">
     <div class="modal-content">
@@ -330,8 +344,14 @@
         <input type="text" id="cpfFuncionario">
       </div>
       <div class="form-group">
-        <label>Função</label>
-        <input type="text" id="funcaoFuncionario" placeholder="Ex: Conferente, Carregador">
+        <label>Função / Tipo</label>
+        <select id="funcaoFuncionario" style="width: 100%; background: rgba(10, 15, 31, 0.6); border: 1.5px solid rgba(37, 99, 235, 0.2); color: #e0e7ff; padding: 10px 14px; border-radius: 10px; font-size: 14px;">
+          <option value="Motorista">Motorista</option>
+          <option value="Conferente">Conferente</option>
+          <option value="Carregador">Carregador</option>
+          <option value="Administrativo">Administrativo</option>
+          <option value="Gerente">Gerente</option>
+        </select>
       </div>
       <div class="modal-buttons">
         <button class="btn-salvar" onclick="salvarFuncionario()">Salvar</button>
@@ -557,7 +577,6 @@ function abrirAba(nome) {
   event.target.classList.add('ativo');
 
   if (nome === 'caminhoes') carregarCaminhoes();
-  if (nome === 'motoristas') carregarMotoristas();
   if (nome === 'funcionarios') carregarFuncionarios();
   if (nome === 'viagens') carregarViagensAdmin();
   if (nome === 'historico') carregarHistorico();
@@ -646,88 +665,7 @@ function deletarCaminhao(id) {
 }
 
 // ========================================
-// MOTORISTAS
-// ========================================
-function abrirModalMotorista(id) {
-  document.getElementById('idMotoristaEdicao').value = id || '';
-  
-  if (id) {
-    document.getElementById('tituloMotorista').textContent = 'Editar Motorista';
-    var motorista = JSON.parse(sessionStorage.getItem('motorista_' + id));
-    if (motorista) {
-      document.getElementById('nomeMotorista').value = motorista.nome;
-      document.getElementById('cpfMotorista').value = motorista.cpf;
-      document.getElementById('contatoMotorista').value = motorista.contato || '';
-    }
-  } else {
-    document.getElementById('tituloMotorista').textContent = 'Novo Motorista';
-    document.getElementById('nomeMotorista').value = '';
-    document.getElementById('cpfMotorista').value = '';
-    document.getElementById('contatoMotorista').value = '';
-  }
-  
-  document.getElementById('modalMotorista').classList.add('ativo');
-}
-
-function salvarMotorista() {
-  var id = document.getElementById('idMotoristaEdicao').value;
-  var nome = document.getElementById('nomeMotorista').value;
-  var cpf = document.getElementById('cpfMotorista').value;
-  var contato = document.getElementById('contatoMotorista').value;
-
-  if (!nome || !cpf) {
-    alert('Preencha nome e CPF!');
-    return;
-  }
-
-  var metodo = id ? 'PUT' : 'POST';
-  var url = id ? '/api/motoristas/' + id : '/api/motoristas';
-
-  fetch(url, {
-    method: metodo,
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
-    },
-    body: JSON.stringify({ nome: nome, cpf: cpf, contato: contato })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.erro) {
-      alert(data.erro);
-      return;
-    }
-    fecharModal('modalMotorista');
-    carregarMotoristas();
-  });
-}
-
-function carregarMotoristas() {
-  fetch('/api/motoristas', { headers: { 'Authorization': 'Bearer ' + token } })
-  .then(function(r) { return r.json(); })
-  .then(function(motoristas) {
-    var tbody = document.getElementById('tabelaMotoristas');
-    tbody.innerHTML = '';
-
-    motoristas.forEach(function(m) {
-      sessionStorage.setItem('motorista_' + m.id, JSON.stringify(m));
-      tbody.innerHTML += '<tr style="border-top: 1px solid rgba(37, 99, 235, 0.1);"><td style="padding: 1.25rem; color: #e0e7ff;">' + m.id + '</td><td style="padding: 1.25rem; color: #e0e7ff;">' + m.nome + '</td><td style="padding: 1.25rem; color: #e0e7ff;">' + m.cpf + '</td><td style="padding: 1.25rem; color: #e0e7ff;">' + (m.contato || '-') + '</td><td style="padding: 1.25rem; color: #e0e7ff;">' + (m.ativo ? 'Sim' : 'Não') + '</td><td style="padding: 1.25rem;"><button class="btn-editar" onclick="abrirModalMotorista(' + m.id + ')" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 8px 14px; font-size: 11px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase; margin-right: 5px;">Editar</button><button class="btn-deletar" onclick="deletarMotorista(' + m.id + ')" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 8px 14px; font-size: 11px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase;">Deletar</button></td></tr>';
-    });
-  });
-}
-
-function deletarMotorista(id) {
-  if (confirm('Tem certeza?')) {
-    fetch('/api/motoristas/' + id, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + token }
-    })
-    .then(function() { carregarMotoristas(); });
-  }
-}
-
-// ========================================
-// FUNCIONÁRIOS
+// FUNCIONÁRIOS (inclui Motoristas)
 // ========================================
 function abrirModalFuncionario(id) {
   document.getElementById('idFuncionarioEdicao').value = id || '';
@@ -784,15 +722,34 @@ function salvarFuncionario() {
 }
 
 function carregarFuncionarios() {
-  fetch('/api/funcionarios', { headers: { 'Authorization': 'Bearer ' + token } })
+  var filtro = document.getElementById('filtroFuncao') ? document.getElementById('filtroFuncao').value : '';
+  var url = '/api/funcionarios' + (filtro ? '?funcao=' + encodeURIComponent(filtro) : '');
+  fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
   .then(function(r) { return r.json(); })
   .then(function(funcionarios) {
     var tbody = document.getElementById('tabelaFuncionarios');
     tbody.innerHTML = '';
 
+    if (!funcionarios.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:rgba(224,231,255,0.4);">Nenhum funcionário encontrado</td></tr>';
+      return;
+    }
+
     funcionarios.forEach(function(f) {
       sessionStorage.setItem('funcionario_' + f.id, JSON.stringify(f));
-      tbody.innerHTML += '<tr style="border-top: 1px solid rgba(37, 99, 235, 0.1);"><td style="padding: 1.25rem; color: #e0e7ff;">' + f.id + '</td><td style="padding: 1.25rem; color: #e0e7ff;">' + f.nome + '</td><td style="padding: 1.25rem; color: #e0e7ff;">' + f.cpf + '</td><td style="padding: 1.25rem; color: #e0e7ff;">' + f.funcao + '</td><td style="padding: 1.25rem; color: #e0e7ff;">' + (f.ativo ? 'Sim' : 'Não') + '</td><td style="padding: 1.25rem;"><button class="btn-editar" onclick="abrirModalFuncionario(' + f.id + ')" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 8px 14px; font-size: 11px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase; margin-right: 5px;">Editar</button><button class="btn-deletar" onclick="deletarFuncionario(' + f.id + ')" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 8px 14px; font-size: 11px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase;">Deletar</button></td></tr>';
+      var funcaoBg = 'background:rgba(37,99,235,0.15);color:#60a5fa;';
+      if (f.funcao === 'Motorista') funcaoBg = 'background:rgba(16,185,129,0.15);color:#10b981;';
+      if (f.funcao === 'Gerente')   funcaoBg = 'background:rgba(245,158,11,0.15);color:#fbbf24;';
+      tbody.innerHTML += '<tr style="border-top: 1px solid rgba(37, 99, 235, 0.1);">' +
+        '<td style="padding: 1.25rem; color: #e0e7ff;">' + f.id + '</td>' +
+        '<td style="padding: 1.25rem; color: #e0e7ff;">' + f.nome + '</td>' +
+        '<td style="padding: 1.25rem; color: #e0e7ff;">' + f.cpf + '</td>' +
+        '<td style="padding: 1.25rem;"><span style="' + funcaoBg + 'padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;">' + f.funcao + '</span></td>' +
+        '<td style="padding: 1.25rem; color: #e0e7ff;">' + (f.ativo ? 'Sim' : 'Não') + '</td>' +
+        '<td style="padding: 1.25rem;">' +
+          '<button onclick="abrirModalFuncionario(' + f.id + ')" style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Editar</button>' +
+          '<button onclick="deletarFuncionario(' + f.id + ')" style="background:linear-gradient(135deg,#dc2626 0%,#ef4444 100%);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Deletar</button>' +
+        '</td></tr>';
     });
   });
 }
@@ -818,15 +775,15 @@ function abrirModalCriarViagemAdmin() {
 function carregarSelectsAdmin() {
   Promise.all([
     fetch('/api/caminhoes', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.json(); }),
-    fetch('/api/motoristas', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.json(); }),
+    fetch('/api/funcionarios?funcao=Motorista', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.json(); }),
     fetch('/api/funcionarios', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r) { return r.json(); })
   ]).then(function(results) {
-    var caminhoes = results[0];
+    var caminhoes  = results[0];
     var motoristas = results[1];
-    var funcionarios = results[2];
-    
-    var selCaminhao = document.getElementById('caminhaoCriarAdmin');
-    var selMotorista = document.getElementById('motoristaCriarAdmin');
+    var todos      = results[2];
+
+    var selCaminhao   = document.getElementById('caminhaoCriarAdmin');
+    var selMotorista  = document.getElementById('motoristaCriarAdmin');
     var selFuncionario = document.getElementById('funcionarioCriarAdmin');
 
     selCaminhao.innerHTML = '<option value="">Selecione o caminhão</option>';
@@ -841,8 +798,9 @@ function carregarSelectsAdmin() {
       selMotorista.innerHTML += '<option value="' + m.id + '">' + m.nome + '</option>';
     });
 
+    var naoMotoristas = todos.filter(function(f) { return f.funcao !== 'Motorista'; });
     selFuncionario.innerHTML = '<option value="">Selecione o funcionário</option>';
-    funcionarios.forEach(function(f) {
+    naoMotoristas.forEach(function(f) {
       selFuncionario.innerHTML += '<option value="' + f.id + '">' + f.nome + ' (' + f.funcao + ')</option>';
     });
   });
@@ -1061,39 +1019,53 @@ function carregarHistorico() {
   fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
   .then(function(r) { return r.json(); })
   .then(function(historico) {
+    console.log('Dados do histórico:', historico);
     var div = document.getElementById('listaHistorico');
     div.innerHTML = '';
 
+    if (!Array.isArray(historico)) {
+      div.innerHTML = '<p style="text-align: center; padding: 20px; color: #ef4444;">Erro ao carregar histórico: ' + (historico.erro || 'resposta inesperada da API') + '</p>';
+      return;
+    }
+
     if (historico.length === 0) {
-      div.innerHTML = '<p style="text-align: center; padding: 20px; color: rgba(226, 232, 240, 0.5);">Nenhum histórico registrado</p>';
+      div.innerHTML = '<p style="text-align: center; padding: 20px; color: rgba(226, 232, 240, 0.5);">Nenhum registro encontrado</p>';
       return;
     }
 
     var html = '<p style="color: #60a5fa; margin-bottom: 1rem; font-weight: 700;">' + historico.length + ' registro(s) encontrado(s)</p>';
-    
+
     historico.forEach(function(h) {
       var acaoBg = 'background: rgba(37, 99, 235, 0.15); color: #60a5fa;';
       if (h.acao === 'criar') acaoBg = 'background: rgba(16, 185, 129, 0.15); color: #10b981;';
-      if (h.acao === 'editar') acaoBg = 'background: rgba(245, 158, 11, 0.15); color: #fbbf24;';
+      if (h.acao === 'atualizar' || h.acao === 'atualizar_status') acaoBg = 'background: rgba(245, 158, 11, 0.15); color: #fbbf24;';
       if (h.acao === 'deletar') acaoBg = 'background: rgba(239, 68, 68, 0.15); color: #ef4444;';
-      
+
+      var dadosAntigos = h.dados_antigos ? JSON.stringify(h.dados_antigos).substring(0, 120) : null;
+      var dadosNovos   = h.dados_novos   ? JSON.stringify(h.dados_novos).substring(0, 120)   : null;
+
       html += '<div class="historico-item" style="background: rgba(20, 26, 47, 0.8); border: 1px solid rgba(37, 99, 235, 0.15); padding: 1.5rem; border-radius: 10px; margin-bottom: 1rem; border-left: 5px solid #3b82f6;">';
       html += '<div class="historico-header" style="margin-bottom: 1rem; font-weight: 700; color: #e0e7ff; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">';
       html += '<span><span style="' + acaoBg + ' padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; display: inline-block; margin-right: 10px;">' + h.acao + '</span>em <strong>' + h.tabela + '</strong> (ID: ' + h.registro_id + ')</span>';
       html += '<span style="color: #60a5fa; font-size: 12px;">' + (h.usuario || 'Sistema') + '</span>';
       html += '</div>';
       html += '<div class="historico-detalhes" style="font-size: 13px; color: rgba(224, 231, 255, 0.6); line-height: 1.8;">';
-      html += '<strong>Data:</strong> ' + h.data_hora + '<br>';
-      if (h.dados_antigos && h.dados_antigos !== '{}') {
-        html += '<strong>Antes:</strong> ' + h.dados_antigos.substring(0, 100) + '...<br>';
+      html += '<strong>Data:</strong> ' + new Date(h.data_hora).toLocaleString('pt-BR') + '<br>';
+      if (dadosAntigos) {
+        html += '<strong>Antes:</strong> ' + dadosAntigos + '...<br>';
       }
-      if (h.dados_novos && h.dados_novos !== '{}') {
-        html += '<strong>Depois:</strong> ' + h.dados_novos.substring(0, 100) + '...';
+      if (dadosNovos) {
+        html += '<strong>Depois:</strong> ' + dadosNovos + '...';
       }
       html += '</div></div>';
     });
-    
+
     div.innerHTML = html;
+  })
+  .catch(function(err) {
+    console.error('Erro ao carregar histórico:', err);
+    var div = document.getElementById('listaHistorico');
+    div.innerHTML = '<p style="text-align: center; padding: 20px; color: #ef4444;">Erro de conexão ao carregar histórico</p>';
   });
 }
 
@@ -1183,6 +1155,112 @@ function logout() {
 }
 
 carregarCaminhoes();
+
+// ========================================
+// PAINEL FINANCEIRO
+// ========================================
+
+const sfTexto = {
+  pendente:           'Pendente',
+  pronto_financeiro:  '✓ Pronto',
+  enviado_financeiro: '→ Enviado',
+  aprovado:           '✅ Aprovado',
+  rejeitado:          '✗ Rejeitado'
+};
+
+const sfCor = {
+  pendente:           '#94a3b8',
+  pronto_financeiro:  '#10b981',
+  enviado_financeiro: '#f59e0b',
+  aprovado:           '#818cf8',
+  rejeitado:          '#ef4444'
+};
+
+async function carregarPainelFinanceiro(filtro) {
+  const url = filtro
+    ? `/api/carregamentos/financeiro?status_financeiro=${filtro}`
+    : '/api/carregamentos/financeiro';
+
+  const token = localStorage.getItem('token');
+  const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+  const data = await resp.json();
+  const lista = data.dados || [];
+
+  const tbody = document.getElementById('tabelaFinanceiro');
+  tbody.innerHTML = '';
+
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:#64748b;">Nenhum carregamento neste status.</td></tr>';
+    return;
+  }
+
+  lista.forEach(function(c) {
+    const sf = c.status_financeiro || 'pendente';
+    const cor = sfCor[sf] || '#94a3b8';
+    const total = parseInt(c.total_notas) || 0;
+    const entregues = parseInt(c.notas_entregues) || 0;
+    const realocadas = parseInt(c.notas_realocadas) || 0;
+    const pct = total > 0 ? ((entregues / total) * 100).toFixed(1) : '0.0';
+
+    const podeMover = sf === 'pronto_financeiro';
+    const podeAprovar = ['pronto_financeiro','enviado_financeiro'].includes(sf);
+    const podeRejeitar = ['pronto_financeiro','enviado_financeiro'].includes(sf);
+
+    tbody.innerHTML += `
+      <tr style="border-bottom:1px solid rgba(37,99,235,0.08);">
+        <td style="padding:12px 10px;color:#60a5fa;font-weight:700;">#${c.id}</td>
+        <td style="padding:12px 10px;">${c.placa || '—'}</td>
+        <td style="padding:12px 10px;">${c.motorista_nome || '—'}</td>
+        <td style="padding:12px 10px;">${total}</td>
+        <td style="padding:12px 10px;color:#10b981;">${entregues} <small style="color:#64748b;">(${pct}%)</small></td>
+        <td style="padding:12px 10px;color:#a78bfa;">${realocadas}</td>
+        <td style="padding:12px 10px;">
+          <span style="background:${cor}22;color:${cor};border:1px solid ${cor}44;padding:4px 10px;border-radius:16px;font-size:11px;font-weight:700;">
+            ${sfTexto[sf] || sf}
+          </span>
+        </td>
+        <td style="padding:12px 10px;">
+          ${podeMover ? `<button onclick="atualizarFinanceiro(${c.id},'enviado_financeiro')" style="padding:7px 12px;background:rgba(245,158,11,0.2);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px;text-transform:uppercase;">→ Enviar</button>` : ''}
+          ${podeAprovar ? `<button onclick="atualizarFinanceiro(${c.id},'aprovado')" style="padding:7px 12px;background:rgba(99,102,241,0.2);color:#818cf8;border:1px solid rgba(99,102,241,0.3);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px;text-transform:uppercase;">✅ Aprovar</button>` : ''}
+          ${podeRejeitar ? `<button onclick="abrirModalRejeitar(${c.id})" style="padding:7px 12px;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;">✗ Rejeitar</button>` : ''}
+        </td>
+      </tr>
+    `;
+  });
+}
+
+async function atualizarFinanceiro(id, status_financeiro) {
+  const token = localStorage.getItem('token');
+  const resp = await fetch(`/api/carregamentos/${id}/status-financeiro`, {
+    method: 'PUT',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status_financeiro })
+  });
+  const data = await resp.json();
+  if (data.erro) { alert(data.erro); return; }
+  carregarPainelFinanceiro();
+}
+
+function abrirModalRejeitar(id) {
+  document.getElementById('idRejeitar').value = id;
+  document.getElementById('motivoRejeitar').value = '';
+  document.getElementById('modalRejeitar').style.display = 'flex';
+}
+
+async function confirmarRejeitar() {
+  const id = document.getElementById('idRejeitar').value;
+  const motivo = document.getElementById('motivoRejeitar').value.trim();
+  const token = localStorage.getItem('token');
+  const resp = await fetch(`/api/carregamentos/${id}/status-financeiro`, {
+    method: 'PUT',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status_financeiro: 'rejeitado', motivo_rejeicao: motivo })
+  });
+  const data = await resp.json();
+  document.getElementById('modalRejeitar').style.display = 'none';
+  if (data.erro) { alert(data.erro); return; }
+  carregarPainelFinanceiro();
+}
   </script>
 </body>
 </html>

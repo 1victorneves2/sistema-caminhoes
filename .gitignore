@@ -1,0 +1,19 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (nunca commitar!)
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Banco local
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db

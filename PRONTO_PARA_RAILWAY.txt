@@ -1,0 +1,2 @@
+✅ .env configurado para Railway
+Execute: npm start

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
@@ -15,8 +15,10 @@
     <div class="nav-links">
       <a href="index.html">Dashboard</a>
       <a href="caminhoes.html" class="ativo">Caminhões</a>
-      <a href="motoristas.html">Motoristas</a>
       <a href="viagens.html">Viagens</a>
+      <a href="carregamentos.html">Carregamentos</a>
+      <a href="estatisticas.html">Estatísticas</a>
+      <a href="mapa.html">Mapa GPS</a>
       <a href="historico.html">Histórico</a>
       <a href="admin.html" id="linkAdmin" style="display: none;">Admin</a>
       <a href="login.html" id="linkLogin">Login</a>
@@ -94,8 +96,28 @@ document.getElementById('linkSair').onclick = (e) => {
   e.preventDefault();
   localStorage.removeItem('token');
   localStorage.removeItem('usuario');
+  localStorage.removeItem('empresa_id');
+  document.cookie = 'token=; path=/; max-age=0';
   window.location.href = 'login.html';
 };
+
+// Interceptor global: trata 401 (sessão expirada) em qualquer fetch
+(function() {
+  const _fetch = window.fetch;
+  window.fetch = function(...args) {
+    return _fetch.apply(this, args).then(response => {
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        localStorage.removeItem('empresa_id');
+        document.cookie = 'token=; path=/; max-age=0';
+        alert('Sessão expirada. Faça login novamente.');
+        window.location.href = 'login.html';
+      }
+      return response;
+    });
+  };
+}());
 
 // Canvas
 function initCanvas() {

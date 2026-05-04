@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
@@ -105,7 +105,12 @@
     <h1>Controle de Caminhões - Viagens</h1>
     <div class="nav-links">
       <a href="index.html">Dashboard</a>
+      <a href="caminhoes.html">Caminhões</a>
       <a href="viagens.html" class="ativo">Viagens</a>
+      <a href="carregamentos.html">Carregamentos</a>
+      <a href="estatisticas.html">Estatísticas</a>
+      <a href="mapa.html">Mapa GPS</a>
+      <a href="historico.html">Histórico</a>
       <a href="admin.html" id="linkAdmin" style="display: none;">Admin</a>
       <a href="#" id="linkSair" style="display: none;">Sair</a>
     </div>
@@ -273,8 +278,28 @@ document.getElementById('linkSair').onclick = function(e) {
   e.preventDefault();
   localStorage.removeItem('token');
   localStorage.removeItem('usuario');
+  localStorage.removeItem('empresa_id');
+  document.cookie = 'token=; path=/; max-age=0';
   window.location.href = 'login.html';
 };
+
+// Interceptor global: trata 401 (sessão expirada) em qualquer fetch
+(function() {
+  const _fetch = window.fetch;
+  window.fetch = function(...args) {
+    return _fetch.apply(this, args).then(response => {
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        localStorage.removeItem('empresa_id');
+        document.cookie = 'token=; path=/; max-age=0';
+        alert('Sessão expirada. Faça login novamente.');
+        window.location.href = 'login.html';
+      }
+      return response;
+    });
+  };
+}());
 
 // ========================================
 // WEBSOCKET
@@ -373,11 +398,11 @@ function abrirModalCriarViagem() {
 function carregarSelects() {
   Promise.all([
     fetch('/api/caminhoes', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json()),
-    fetch('/api/motoristas', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json()),
+    fetch('/api/funcionarios?funcao=Motorista', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json()),
     fetch('/api/funcionarios', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json())
   ]).then(function(results) {
     var caminhoes = results[0], motoristas = results[1], funcionarios = results[2];
-    
+
     document.getElementById('caminhaoCriar').innerHTML = '<option value="">Selecione o caminhão</option>';
     caminhoes.forEach(function(c) {
       if (c.status === 'disponivel') {
@@ -390,8 +415,9 @@ function carregarSelects() {
       document.getElementById('motoristaCriar').innerHTML += '<option value="' + m.id + '">' + m.nome + '</option>';
     });
 
+    var naoMotoristas = funcionarios.filter(function(f) { return f.funcao !== 'Motorista'; });
     document.getElementById('funcionarioCriar').innerHTML = '<option value="">Selecione o funcionário</option>';
-    funcionarios.forEach(function(f) {
+    naoMotoristas.forEach(function(f) {
       document.getElementById('funcionarioCriar').innerHTML += '<option value="' + f.id + '">' + f.nome + ' (' + f.funcao + ')</option>';
     });
   });

@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-const SECRET = process.env.JWT_SECRET || 'sua-chave-secreta-aqui';
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET) {
+  console.error('ERRO CRÍTICO: JWT_SECRET não definido nas variáveis de ambiente');
+  process.exit(1);
+}
 
 // Middleware de autenticação
 const verificarToken = (req, res, next) => {
@@ -34,10 +38,11 @@ const gerarToken = (usuario) => {
       id: usuario.id,
       email: usuario.email,
       nome: usuario.nome,
-      role: usuario.role
+      role: usuario.role,
+      empresa_id: usuario.empresa_id
     },
     SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: '1h' }
   );
 };
 

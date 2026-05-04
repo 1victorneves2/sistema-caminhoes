@@ -56,10 +56,61 @@ function iniciarWebSocket(server) {
 
           // Processar outras mensagens
           if (dados.tipo === 'NOTIFICACAO') {
-            // Apenas admins podem enviar notificações
             if (decoded.role === 'admin') {
               notificarTodosClientes(dados.evento, dados.dados);
             }
+          }
+
+          // ---- Eventos do fluxo de entrega ----
+          if (dados.tipo === 'CHEGOU_LOCAL') {
+            notificarAdmins('CHEGOU_LOCAL', {
+              carregamento_id: dados.carregamento_id,
+              motorista: decoded.nome,
+              timestamp: dados.timestamp || new Date().toISOString()
+            });
+          }
+
+          if (dados.tipo === 'NOTA_ATUALIZADA') {
+            notificarAdmins('NOTA_ATUALIZADA', {
+              carregamento_id: dados.carregamento_id,
+              nota_id: dados.nota_id,
+              status: dados.status,
+              motorista: decoded.nome,
+              timestamp: dados.timestamp || new Date().toISOString()
+            });
+          }
+
+          if (dados.tipo === 'CARREGAMENTO_FINALIZADO') {
+            notificarAdmins('CARREGAMENTO_FINALIZADO', {
+              carregamento_id: dados.carregamento_id,
+              motorista: decoded.nome,
+              timestamp: dados.timestamp || new Date().toISOString()
+            });
+          }
+
+          // ---- GPS em tempo real ----
+          if (dados.tipo === 'GPS') {
+            const { caminhao_id, carregamento_id, lat, lng, velocidade, precisao } = dados;
+            if (caminhao_id && lat != null && lng != null && global.db && decoded.empresa_id) {
+              // Persiste assincronamente sem bloquear o handler
+              global.db.query(
+                `INSERT INTO localizacoes
+                   (caminhao_id, carregamento_id, latitude, longitude, velocidade, precisao, empresa_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [caminhao_id, carregamento_id || null, lat, lng,
+                 velocidade || null, precisao || null, decoded.empresa_id]
+              ).catch(err => console.error('Erro ao salvar GPS:', err.message));
+            }
+
+            notificarAdmins('GPS_ATUALIZADO', {
+              caminhao_id,
+              carregamento_id: carregamento_id || null,
+              motorista: decoded.nome,
+              latitude: lat,
+              longitude: lng,
+              velocidade: velocidade || null,
+              timestamp: new Date().toISOString()
+            });
           }
         } catch (erro) {
           console.error('Erro ao processar mensagem:', erro);

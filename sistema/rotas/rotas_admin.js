@@ -5,12 +5,32 @@ const { verificarToken, verificarAdmin } = require('../middlewares/auth');
 // ========================================
 // GET - HISTÓRICO COMPLETO
 // ========================================
+const TABELAS_VALIDAS = ['caminhoes', 'motoristas', 'viagens', 'funcionarios', 'usuarios'];
+const STATUS_VIAGEM_VALIDOS = ['carregado', 'saiu_para_entrega', 'em_rota', 'entregue', 'retorno_problema'];
+const REGEX_DATA = /^\d{4}-\d{2}-\d{2}$/;
+
+function dataValida(str) {
+  if (!REGEX_DATA.test(str)) return false;
+  const d = new Date(str);
+  return d instanceof Date && !isNaN(d);
+}
+
 router.get('/historico', verificarToken, verificarAdmin, async (req, res) => {
   try {
     const { dataInicio, dataFim, tabela } = req.query;
-    
+
+    if ((dataInicio || dataFim) && !(dataInicio && dataFim)) {
+      return res.status(400).json({ erro: 'Informe dataInicio e dataFim juntos' });
+    }
+    if (dataInicio && (!dataValida(dataInicio) || !dataValida(dataFim))) {
+      return res.status(400).json({ erro: 'Datas devem estar no formato YYYY-MM-DD' });
+    }
+    if (tabela && !TABELAS_VALIDAS.includes(tabela)) {
+      return res.status(400).json({ erro: `Tabela inválida. Valores aceitos: ${TABELAS_VALIDAS.join(', ')}` });
+    }
+
     let sql = `
-      SELECT 
+      SELECT
         h.id, h.acao, h.tabela, h.registro_id, h.dados_antigos, h.dados_novos, h.data_hora,
         u.nome as usuario
       FROM historico h
@@ -83,6 +103,16 @@ router.get('/estatisticas', verificarToken, verificarAdmin, async (req, res) => 
 router.get('/relatorio/viagens', verificarToken, verificarAdmin, async (req, res) => {
   try {
     const { dataInicio, dataFim, status } = req.query;
+
+    if ((dataInicio || dataFim) && !(dataInicio && dataFim)) {
+      return res.status(400).json({ erro: 'Informe dataInicio e dataFim juntos' });
+    }
+    if (dataInicio && (!dataValida(dataInicio) || !dataValida(dataFim))) {
+      return res.status(400).json({ erro: 'Datas devem estar no formato YYYY-MM-DD' });
+    }
+    if (status && !STATUS_VIAGEM_VALIDOS.includes(status)) {
+      return res.status(400).json({ erro: `Status inválido. Valores aceitos: ${STATUS_VIAGEM_VALIDOS.join(', ')}` });
+    }
 
     let sql = `
       SELECT 
@@ -157,6 +187,13 @@ router.get('/relatorio/problemas', verificarToken, verificarAdmin, async (req, r
 router.get('/relatorio/notas', verificarToken, verificarAdmin, async (req, res) => {
   try {
     const { dataInicio, dataFim } = req.query;
+
+    if ((dataInicio || dataFim) && !(dataInicio && dataFim)) {
+      return res.status(400).json({ erro: 'Informe dataInicio e dataFim juntos' });
+    }
+    if (dataInicio && (!dataValida(dataInicio) || !dataValida(dataFim))) {
+      return res.status(400).json({ erro: 'Datas devem estar no formato YYYY-MM-DD' });
+    }
 
     let filtroData = '';
     let params = [];
