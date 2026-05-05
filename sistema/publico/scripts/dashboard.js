@@ -64,5 +64,18 @@ function carregarViagensTabela(viagens) {
   });
 }
 
-atualizarDashboard();
-setInterval(atualizarDashboard, 10000);
+function iniciarDashboardJS() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = '/login.html';
+    return;
+  }
+  atualizarDashboard();
+  setInterval(atualizarDashboard, 10000);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', iniciarDashboardJS);
+} else {
+  iniciarDashboardJS();
+}

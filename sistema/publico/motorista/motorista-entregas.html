@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Minhas Entregas</title>
+  <style>
+    * { box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent; }
+    body { background:#0a0f1f;color:#e0e7ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh; }
+    nav { background:linear-gradient(135deg,#0a0f1f 0%,#141a2f 100%);border-bottom:1px solid rgba(37,99,235,0.2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100; }
+    nav h1 { font-size:15px;font-weight:800;color:#60a5fa;text-transform:uppercase;letter-spacing:2px; }
+    .nav-usuario { font-size:13px;color:#94a3b8; }
+    .nav-sair { font-size:13px;color:#ef4444;text-decoration:none;font-weight:700; }
+    main { padding:16px;max-width:600px;margin:0 auto; }
+    h2 { font-size:18px;font-weight:800;color:#e0e7ff;margin:16px 0 12px;text-transform:uppercase;letter-spacing:1px; }
+    .stats-row { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px; }
+    .stat-mini { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.15);border-radius:12px;padding:14px 10px;text-align:center; }
+    .stat-mini .num { font-size:28px;font-weight:800;display:block; }
+    .stat-mini .lbl { font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px; }
+    .nota-card { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.15);border-radius:14px;padding:16px;margin-bottom:12px;transition:border-color 0.2s; }
+    .nota-card.entregue  { border-color:rgba(16,185,129,0.4); }
+    .nota-card.problema  { border-color:rgba(239,68,68,0.4); }
+    .nota-card.nao_encontrado { border-color:rgba(245,158,11,0.4); }
+    .nota-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px; }
+    .nota-numero { font-size:16px;font-weight:800;color:#60a5fa; }
+    .nota-badge { font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase; }
+    .badge-pendente  { background:rgba(100,116,139,0.2);color:#94a3b8; }
+    .badge-entregue  { background:rgba(16,185,129,0.2);color:#10b981; }
+    .badge-problema  { background:rgba(239,68,68,0.2);color:#ef4444; }
+    .badge-nao_encontrado { background:rgba(245,158,11,0.2);color:#f59e0b; }
+    .nota-desc { font-size:13px;color:#94a3b8;margin-bottom:12px; }
+    .nota-qtd  { font-size:12px;color:#64748b; }
+    .nota-acoes { display:flex;gap:8px;flex-wrap:wrap;margin-top:12px; }
+    .btn-nota { flex:1;min-width:80px;padding:10px 8px;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px; }
+    .btn-entregar { background:linear-gradient(135deg,#059669,#10b981);color:#0a0f1f; }
+    .btn-problema { background:linear-gradient(135deg,#dc2626,#ef4444);color:white; }
+    .btn-nao-enc  { background:linear-gradient(135deg,#92400e,#f59e0b);color:#0a0f1f; }
+    .carregamento-header { background:linear-gradient(135deg,#0f1832,#1e2847);border:1px solid rgba(37,99,235,0.2);border-radius:14px;padding:16px;margin-bottom:20px; }
+    .carregamento-header h3 { font-size:13px;color:#60a5fa;text-transform:uppercase;margin-bottom:8px; }
+    .ch-linha { font-size:13px;color:#94a3b8;margin-bottom:4px; }
+    .ch-linha strong { color:#e0e7ff; }
+    .progresso-wrap { height:8px;background:#1e293b;border-radius:8px;margin:12px 0;overflow:hidden; }
+    .progresso-bar  { height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:8px;transition:width 0.5s; }
+    .vazio { text-align:center;padding:3rem 1rem;color:#475569; }
+    .vazio p { font-size:14px;margin-top:8px; }
+    .notif { position:fixed;top:16px;right:16px;left:16px;background:linear-gradient(135deg,#059669,#10b981);color:white;padding:14px 18px;border-radius:12px;font-size:14px;font-weight:700;z-index:9999;animation:slideIn 0.3s ease-out;display:none; }
+    @keyframes slideIn { from{transform:translateY(-50px);opacity:0;}to{transform:translateY(0);opacity:1;} }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <h1>Entregas</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="nav-usuario" id="nomeUsuario"></span>
+      <a href="#" class="nav-sair" onclick="fazerLogout(); return false;">Sair</a>
+    </div>
+  </nav>
+
+  <div class="notif" id="notif"></div>
+
+  <main>
+    <div id="conteudo">
+      <div class="vazio"><p>Carregando entregas...</p></div>
+    </div>
+  </main>
+
+  <script>
+  const token   = localStorage.getItem('token');
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+
+  if (!token) window.location.href = '/login.html';
+  if (usuario.nome) document.getElementById('nomeUsuario').textContent = usuario.nome;
+
+  (function() {
+    const _f = window.fetch;
+    window.fetch = function(...a) {
+      return _f.apply(this, a).then(r => {
+        if (r.status === 401) { fazerLogout(); }
+        return r;
+      });
+    };
+  }());
+
+  function fazerLogout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('empresa_id');
+    document.cookie = 'token=; path=/; max-age=0';
+    window.location.href = '/login.html';
+  }
+
+  function mostrarNotif(msg, erro) {
+    const el = document.getElementById('notif');
+    el.textContent = msg;
+    el.style.background = erro ? 'linear-gradient(135deg,#dc2626,#ef4444)' : 'linear-gradient(135deg,#059669,#10b981)';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
+
+  let carregamentoAtivo = null;
+  let notas = [];
+
+  async function carregarEntrega() {
+    try {
+      const r = await fetch('/api/entregas/ativas', { headers: { Authorization: 'Bearer ' + token } });
+      const dados = await r.json();
+      const lista = Array.isArray(dados) ? dados : (dados.carregamentos || []);
+      if (!lista.length) { document.getElementById('conteudo').innerHTML = '<div class="vazio"><p>Nenhuma entrega ativa no momento.</p></div>'; return; }
+      carregamentoAtivo = lista[0];
+      await carregarNotas(carregamentoAtivo.id);
+    } catch (err) {
+      document.getElementById('conteudo').innerHTML = '<div class="vazio"><p>Erro ao carregar entregas.</p></div>';
+    }
+  }
+
+  async function carregarNotas(carregamentoId) {
+    try {
+      const r = await fetch(`/api/notas/${carregamentoId}`, { headers: { Authorization: 'Bearer ' + token } });
+      notas = await r.json();
+      if (!Array.isArray(notas)) notas = [];
+      renderizar();
+    } catch { notas = []; renderizar(); }
+  }
+
+  function renderizar() {
+    const c = carregamentoAtivo;
+    if (!c) return;
+    const total     = notas.length;
+    const entregues = notas.filter(n => n.status === 'entregue').length;
+    const problemas = notas.filter(n => n.status === 'problema').length;
+    const pendentes = notas.filter(n => !n.status || n.status === 'pendente').length;
+    const pct = total > 0 ? Math.round((entregues / total) * 100) : 0;
+    const notasHTML = notas.map(n => {
+      const st = n.status || 'pendente';
+      const label = { pendente:'Pendente', entregue:'Entregue', problema:'Problema', nao_encontrado:'Não Encontrado' }[st] || st;
+      const botoes = st === 'pendente' ? `<div class="nota-acoes"><button class="btn-nota btn-entregar" onclick="atualizarNota(${c.id},${n.id},'entregue')">✓ Entregue</button><button class="btn-nota btn-problema" onclick="atualizarNota(${c.id},${n.id},'problema')">✗ Problema</button><button class="btn-nota btn-nao-enc" onclick="atualizarNota(${c.id},${n.id},'nao_encontrado')">? Não Enc.</button></div>` : '';
+      return `<div class="nota-card ${st}"><div class="nota-header"><span class="nota-numero">NF ${n.numero_nota||n.id}</span><span class="nota-badge badge-${st}">${label}</span></div>${n.descricao?`<div class="nota-desc">${n.descricao}</div>`:''} ${n.quantidade?`<div class="nota-qtd">Qtd: ${n.quantidade}</div>`:''}${botoes}</div>`;
+    }).join('');
+    document.getElementById('conteudo').innerHTML = `
+      <div class="stats-row">
+        <div class="stat-mini"><span class="num" style="color:#60a5fa;">${total}</span><span class="lbl">Total</span></div>
+        <div class="stat-mini"><span class="num" style="color:#10b981;">${entregues}</span><span class="lbl">Entregues</span></div>
+        <div class="stat-mini"><span class="num" style="color:#ef4444;">${problemas}</span><span class="lbl">Problemas</span></div>
+      </div>
+      <div class="carregamento-header">
+        <h3>Carregamento #${c.id}</h3>
+        <div class="ch-linha"><strong>Caminhão:</strong> ${c.placa||'-'}</div>
+        <div class="ch-linha"><strong>Conferente:</strong> ${c.conferente||'-'}</div>
+        <div class="progresso-wrap"><div class="progresso-bar" style="width:${pct}%;"></div></div>
+        <div style="font-size:12px;color:#64748b;text-align:right;">${pct}% concluído</div>
+      </div>
+      <h2>Notas (${pendentes} pendentes)</h2>
+      ${notasHTML || '<div class="vazio"><p>Nenhuma nota neste carregamento.</p></div>'}`;
+  }
+
+  async function atualizarNota(carregamentoId, notaId, status) {
+    try {
+      const r = await fetch(`/api/notas/${carregamentoId}/notas/${notaId}/status`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ status })
+      });
+      if (!r.ok) throw new Error();
+      mostrarNotif(status === 'entregue' ? '✓ Nota entregue!' : '✗ Status atualizado');
+      await carregarNotas(carregamentoId);
+    } catch { mostrarNotif('Erro ao atualizar nota', true); }
+  }
+
+  carregarEntrega();
+  </script>
+</body>
+</html>

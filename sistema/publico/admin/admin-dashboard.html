@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Admin - Controle de Caminhões</title>
+  <link rel="stylesheet" href="/style_ultra_profissional.css">
+</head>
+<body>
+
+  <canvas id="background-canvas"></canvas>
+
+  <nav></nav>
+
+  <style>
+    .rt-section { margin-top: 2.5rem; }
+    .rt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .rt-header h2 { margin-bottom: 0; }
+    .rt-status-badge { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .rt-online  { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+    .rt-offline { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3);  }
+    .rt-lista { display: flex; flex-direction: column; gap: 10px; }
+    .rt-card {
+      background: linear-gradient(135deg, #141a2f 0%, #1a2240 100%);
+      border: 1px solid rgba(37,99,235,0.15);
+      border-radius: 12px; padding: 14px 18px;
+      display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; transition: border-color 0.3s;
+    }
+    .rt-card.chegou   { border-color: rgba(245,158,11,0.5); }
+    .rt-card.entregue { border-color: rgba(16,185,129,0.5); }
+    .rt-card.problema { border-color: rgba(239,68,68,0.4);  }
+    .rt-card.concluido{ border-color: rgba(100,116,139,0.3); opacity: 0.7; }
+    .rt-id { background: rgba(37,99,235,0.15); color: #60a5fa; border-radius: 8px; padding: 6px 12px; font-weight: 800; font-size: 15px; white-space: nowrap; }
+    .rt-motorista { font-size: 14px; font-weight: 700; color: #e0e7ff; }
+    .rt-detalhes  { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .rt-ultima-acao { font-size: 11px; font-weight: 700; text-align: right; white-space: nowrap; }
+    .rt-progresso-wrap { grid-column: 1 / -1; height: 5px; background: #1e293b; border-radius: 5px; overflow: hidden; }
+    .rt-progresso-bar  { height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 5px; transition: width 0.5s ease; }
+    .rt-feed { background: linear-gradient(135deg, #0d1220 0%, #141a2f 100%); border: 1px solid rgba(37,99,235,0.12); border-radius: 12px; padding: 14px 16px; margin-top: 1rem; max-height: 200px; overflow-y: auto; }
+    .rt-feed-titulo { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+    .rt-evento { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid rgba(37,99,235,0.06); font-size: 13px; }
+    .rt-evento:last-child { border-bottom: none; }
+    .rt-evento-icon { font-size: 15px; flex-shrink: 0; }
+    .rt-evento-texto { color: #94a3b8; }
+    .rt-evento-texto strong { color: #e0e7ff; }
+    .rt-evento-hora { font-size: 11px; color: #475569; margin-left: auto; white-space: nowrap; }
+  </style>
+
+  <main>
+    <h2>Dashboard de Operações</h2>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Caminhões Disponíveis</h3>
+        <p class="numero" id="disponveis">0</p>
+      </div>
+      <div class="card">
+        <h3>Em Rota</h3>
+        <p class="numero" id="em-rota">0</p>
+      </div>
+      <div class="card">
+        <h3>Entregues Hoje</h3>
+        <p class="numero" id="entregues">0</p>
+      </div>
+      <div class="card">
+        <h3>Com Problema</h3>
+        <p class="numero" id="problema">0</p>
+      </div>
+    </div>
+
+    <div class="rt-section">
+      <div class="rt-header">
+        <h2>Entregas em Tempo Real</h2>
+        <span id="rtStatusBadge" class="rt-status-badge rt-offline">● Desconectado</span>
+      </div>
+      <div id="rtLista" class="rt-lista">
+        <div style="color:#64748b;font-size:14px;padding:1rem 0;">Carregando carregamentos ativos...</div>
+      </div>
+      <div class="rt-feed" id="rtFeed">
+        <div class="rt-feed-titulo">Feed de Eventos</div>
+        <div id="rtEventos"><div style="color:#475569;font-size:13px;">Aguardando eventos...</div></div>
+      </div>
+    </div>
+
+    <h2 style="margin-top: 2.5rem;">Viagens Ativas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Caminhão</th>
+          <th>Motorista</th>
+          <th>Rota</th>
+          <th>Status</th>
+          <th>Data Saída</th>
+        </tr>
+      </thead>
+      <tbody id="viagensTabela"></tbody>
+    </table>
+  </main>
+
+  <script src="/scripts/config-navbar.js"></script>
+  <script src="/scripts/navbar.js"></script>
+  <script>
+renderizarNavbar();
+const token  = localStorage.getItem('token');
+const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+
+if (!token) window.location.href = '/login.html';
+
+(function() {
+  const canvas = document.getElementById('background-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const particles = [];
+  class Particle {
+    constructor() { this.x=Math.random()*canvas.width; this.y=Math.random()*canvas.height; this.size=Math.random()*3+1; this.speedX=(Math.random()-.5)*.8; this.speedY=(Math.random()-.5)*.8; this.opacity=Math.random()*.7+.3; }
+    update() { this.x+=this.speedX; this.y+=this.speedY; if(this.x>canvas.width)this.x=0; if(this.x<0)this.x=canvas.width; if(this.y>canvas.height)this.y=0; if(this.y<0)this.y=canvas.height; }
+    draw() { ctx.fillStyle=`rgba(37,99,235,${this.opacity})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+  }
+  for(let i=0;i<120;i++) particles.push(new Particle());
+  (function a(){ ctx.clearRect(0,0,canvas.width,canvas.height); particles.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(a); })();
+  window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+}());
+
+function animarNumero(id, valor) {
+  const el = document.getElementById(id);
+  const inicio = parseInt(el.textContent) || 0;
+  const diff = valor - inicio;
+  const passos = 30;
+  let atual = 0;
+  const iv = setInterval(function() {
+    atual++;
+    el.textContent = Math.floor(inicio + (diff * (atual / passos)));
+    if (atual >= passos) { el.textContent = valor; clearInterval(iv); }
+  }, 20);
+}
+
+function carregarViagensTabela(viagens) {
+  const tbody = document.getElementById('viagensTabela');
+  tbody.innerHTML = '';
+  if (!viagens || !viagens.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Nenhuma viagem ativa</td></tr>';
+    return;
+  }
+  viagens.filter(v => v.status !== 'entregue').slice(0, 10).forEach(v => {
+    var s = 'background:rgba(37,99,235,0.2);color:#60a5fa;';
+    if (v.status==='disponivel')       s='background:rgba(16,185,129,0.2);color:#10b981;';
+    if (v.status==='carregado')        s='background:rgba(245,158,11,0.2);color:#fbbf24;';
+    if (v.status==='retorno_problema') s='background:rgba(239,68,68,0.2);color:#ef4444;';
+    tbody.innerHTML += `<tr style="border-top:1px solid rgba(37,99,235,0.1);">
+      <td style="padding:1.25rem;color:#e0e7ff;">${v.id}</td>
+      <td style="padding:1.25rem;color:#e0e7ff;">${v.placa}</td>
+      <td style="padding:1.25rem;color:#e0e7ff;">${v.motorista}</td>
+      <td style="padding:1.25rem;color:#e0e7ff;">${v.rota}</td>
+      <td style="padding:1.25rem;"><span style="${s}padding:8px 14px;border-radius:24px;font-size:11px;font-weight:800;text-transform:uppercase;display:inline-block;">${v.status}</span></td>
+      <td style="padding:1.25rem;color:#e0e7ff;">${v.data_saida}</td>
+    </tr>`;
+  });
+}
+
+function atualizarDashboard() {
+  if (!token) return;
+  const headers = { 'Authorization': 'Bearer ' + token };
+  function fetchSafe(url) {
+    return fetch(url, { headers }).then(r => {
+      if (r.status === 401) { window.logout(); return null; }
+      return r.json();
+    }).catch(() => null);
+  }
+  Promise.all([fetchSafe('/api/caminhoes'), fetchSafe('/api/viagens')]).then(function(results) {
+    const caminhoes = results[0]; const viagens = results[1];
+    if (!Array.isArray(caminhoes) || !Array.isArray(viagens)) return;
+    animarNumero('disponveis', caminhoes.filter(c => c.status==='disponivel').length);
+    animarNumero('em-rota',    viagens.filter(v => v.status==='saiu_para_entrega').length);
+    animarNumero('entregues',  viagens.filter(v => v.status==='entregue').length);
+    animarNumero('problema',   viagens.filter(v => v.status==='retorno_problema').length);
+    carregarViagensTabela(viagens);
+  });
+}
+
+atualizarDashboard();
+setInterval(atualizarDashboard, 15000);
+
+// ============================================================
+// TEMPO REAL — carregamentos ativos
+// ============================================================
+async function carregarEntregasAtivas() {
+  const headers = { Authorization: 'Bearer ' + token };
+  try {
+    const r = await fetch('/api/carregamentos', { headers });
+    if (!r.ok) return;
+    const dados = await r.json();
+    const lista = Array.isArray(dados) ? dados : (dados.carregamentos || dados.dados || []);
+    const ativos = lista.filter(c => ['carregado','em_rota'].includes(c.status));
+    renderizarCardsRT(ativos);
+  } catch { /* silencioso */ }
+}
+
+function _corStatus(sm) {
+  if (!sm || sm === 'aguardando') return { cls: '', label: 'Em Rota' };
+  if (sm === 'chegou_local')      return { cls: 'chegou',   label: '📍 No Local' };
+  if (sm === 'em_entrega')        return { cls: 'entregue', label: '📦 Entregando' };
+  if (sm === 'todas_atualizadas') return { cls: 'entregue', label: '✅ Notas OK' };
+  if (sm === 'voltando')          return { cls: 'concluido',label: '🔄 Voltando' };
+  return { cls: '', label: sm };
+}
+
+function renderizarCardsRT(lista) {
+  const el = document.getElementById('rtLista');
+  if (!lista.length) {
+    el.innerHTML = '<div style="color:#64748b;font-size:14px;padding:1rem 0;">Nenhum carregamento ativo.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(c => {
+    const total     = parseInt(c.total_notas)     || 0;
+    const entregues = parseInt(c.notas_entregues) || 0;
+    const pct       = total ? Math.round((entregues / total) * 100) : 0;
+    const { cls, label } = _corStatus(c.status_motorista);
+    return `
+      <div class="rt-card ${cls}">
+        <span class="rt-id">#${c.id}</span>
+        <div>
+          <div class="rt-motorista">${c.motorista_nome || c.placa || '—'}</div>
+          <div class="rt-detalhes">${c.placa || ''} · ${c.conferente_nome ? 'Conf: ' + c.conferente_nome : ''}</div>
+        </div>
+        <div class="rt-ultima-acao" style="color:#60a5fa;">${label}</div>
+        <div class="rt-progresso-wrap">
+          <div class="rt-progresso-bar" style="width:${pct}%"></div>
+        </div>
+        <div style="grid-column:1/-1;font-size:11px;color:#64748b;">${entregues}/${total} notas entregues (${pct}%)</div>
+      </div>`;
+  }).join('');
+}
+
+function adicionarEventoFeed(icone, texto, hora) {
+  const el = document.getElementById('rtEventos');
+  const ph = el.querySelector('[style]');
+  if (ph) ph.remove();
+  const div = document.createElement('div');
+  div.className = 'rt-evento';
+  div.innerHTML = `<span class="rt-evento-icon">${icone}</span><span class="rt-evento-texto">${texto}</span><span class="rt-evento-hora">${hora}</span>`;
+  el.insertBefore(div, el.firstChild);
+  if (el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+function formatarHora(ts) {
+  try { return new Date(ts).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }); }
+  catch { return ''; }
+}
+
+// WebSocket
+let ws = null;
+function conectarWS() {
+  if (!token) return;
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}?token=${token}`);
+
+  ws.onopen = () => {
+    document.getElementById('rtStatusBadge').className = 'rt-status-badge rt-online';
+    document.getElementById('rtStatusBadge').textContent = '● Conectado';
+  };
+
+  ws.onclose = () => {
+    document.getElementById('rtStatusBadge').className = 'rt-status-badge rt-offline';
+    document.getElementById('rtStatusBadge').textContent = '● Desconectado';
+    setTimeout(conectarWS, 5000);
+  };
+
+  ws.onerror = () => ws.close();
+
+  ws.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.tipo !== 'NOTIFICACAO') return;
+      const d   = msg.dados || {};
+      const hora = formatarHora(d.timestamp || msg.timestamp);
+
+      if (msg.evento === 'CHEGOU_LOCAL') {
+        adicionarEventoFeed('📍', `<strong>${d.motorista || 'Motorista'}</strong> chegou ao local (Car. #${d.carregamento_id})`, hora);
+        carregarEntregasAtivas();
+      }
+      if (msg.evento === 'NOTA_ATUALIZADA') {
+        adicionarEventoFeed('📦', `<strong>${d.motorista || 'Motorista'}</strong> atualizou nota #${d.nota_id} → ${d.status}`, hora);
+        carregarEntregasAtivas();
+      }
+      if (msg.evento === 'CARREGAMENTO_FINALIZADO') {
+        adicionarEventoFeed('✅', `<strong>${d.motorista || 'Motorista'}</strong> registrou retorno (Car. #${d.carregamento_id})`, hora);
+        carregarEntregasAtivas();
+      }
+      if (msg.evento === 'GPS_ATUALIZADO') {
+        adicionarEventoFeed('🗺️', `<strong>${d.motorista || 'Motorista'}</strong> atualizou GPS`, hora);
+      }
+    } catch { /* ignorar mensagem malformada */ }
+  };
+}
+
+carregarEntregasAtivas();
+conectarWS();
+  </script>
+</body>
+</html>

@@ -23,12 +23,12 @@ class Funcionario {
     return result.rows[0] || null;
   }
 
-  static async criar({ nome, cpf, funcao, empresa_id }) {
+  static async criar({ nome, cpf, funcao, observacoes, usuario_id, empresa_id }) {
     const result = await global.db.query(
-      `INSERT INTO funcionarios (nome, cpf, funcao, ativo, empresa_id)
-       VALUES ($1, $2, $3, true, $4)
+      `INSERT INTO funcionarios (nome, cpf, funcao, observacoes, usuario_id, ativo, empresa_id)
+       VALUES ($1, $2, $3, $4, $5, true, $6)
        RETURNING *`,
-      [nome, cpf, funcao, empresa_id]
+      [nome, cpf, funcao, observacoes || null, usuario_id || null, empresa_id]
     );
     return result.rows[0] || null;
   }

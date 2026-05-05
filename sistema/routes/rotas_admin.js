@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { verificarToken, verificarAdmin } = require('../middlewares/auth');
+const { verificarToken } = require('../middlewares/auth');
+const { verificarEmpresa } = require('../middlewares/empresa');
+const { verificarPermissao } = require('../middlewares/verificarPermissao');
 
 const TABELAS_VALIDAS = ['caminhoes', 'motoristas', 'viagens', 'funcionarios', 'usuarios'];
 const STATUS_VIAGEM_VALIDOS = ['carregado', 'saiu_para_entrega', 'em_rota', 'entregue', 'retorno_problema'];
@@ -15,7 +17,7 @@ function dataValida(str) {
 // ========================================
 // GET - HISTÓRICO COMPLETO
 // ========================================
-router.get('/historico', verificarToken, verificarAdmin, async (req, res) => {
+router.get('/historico', verificarToken, verificarEmpresa, verificarPermissao('admin', 'historico'), async (req, res) => {
   try {
     const { dataInicio, dataFim, tabela } = req.query;
 
@@ -65,7 +67,7 @@ router.get('/historico', verificarToken, verificarAdmin, async (req, res) => {
 // ========================================
 // GET - ESTATÍSTICAS
 // ========================================
-router.get('/estatisticas', verificarToken, verificarAdmin, async (req, res) => {
+router.get('/estatisticas', verificarToken, verificarEmpresa, verificarPermissao('estatisticas', 'listar'), async (req, res) => {
   try {
     const [
       caminhoes,
@@ -100,7 +102,7 @@ router.get('/estatisticas', verificarToken, verificarAdmin, async (req, res) => 
 // ========================================
 // GET - RELATÓRIO DE VIAGENS
 // ========================================
-router.get('/relatorio/viagens', verificarToken, verificarAdmin, async (req, res) => {
+router.get('/relatorio/viagens', verificarToken, verificarEmpresa, verificarPermissao('estatisticas', 'download'), async (req, res) => {
   try {
     const { dataInicio, dataFim, status } = req.query;
 
@@ -156,7 +158,7 @@ router.get('/relatorio/viagens', verificarToken, verificarAdmin, async (req, res
 // ========================================
 // GET - RELATÓRIO DE PROBLEMAS
 // ========================================
-router.get('/relatorio/problemas', verificarToken, verificarAdmin, async (req, res) => {
+router.get('/relatorio/problemas', verificarToken, verificarEmpresa, verificarPermissao('estatisticas', 'download'), async (req, res) => {
   try {
     const result = await global.db.query(`
       SELECT
@@ -184,7 +186,7 @@ router.get('/relatorio/problemas', verificarToken, verificarAdmin, async (req, r
 // ========================================
 // GET - RELATÓRIO DE NOTAS (entregues x retornadas)
 // ========================================
-router.get('/relatorio/notas', verificarToken, verificarAdmin, async (req, res) => {
+router.get('/relatorio/notas', verificarToken, verificarEmpresa, verificarPermissao('estatisticas', 'download'), async (req, res) => {
   try {
     const { dataInicio, dataFim } = req.query;
 
@@ -270,7 +272,7 @@ router.get('/relatorio/notas', verificarToken, verificarAdmin, async (req, res) 
 // ========================================
 // GET - CAMINHÕES DISPONÍVEIS
 // ========================================
-router.get('/caminhoes/disponivel', verificarToken, verificarAdmin, async (req, res) => {
+router.get('/caminhoes/disponivel', verificarToken, verificarEmpresa, verificarPermissao('caminhoes', 'listar'), async (req, res) => {
   try {
     const result = await global.db.query(`
       SELECT

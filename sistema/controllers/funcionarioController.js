@@ -1,5 +1,24 @@
+const bcrypt = require('bcryptjs');
 const Funcionario = require('../models/funcionario');
 const { salvarHistorico } = require('../utils/historico');
+
+// Sanitiza nome → slug de email (remove acentos, espaços → pontos)
+function _emailBase(nome) {
+  return nome
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '.');
+}
+
+// Gera senha aleatória legível de 8 caracteres
+function _gerarSenha() {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
 
 class FuncionarioController {
   async listar(req, res) {
@@ -14,24 +33,94 @@ class FuncionarioController {
   }
 
   async criar(req, res) {
+    const { nome, cpf, funcao, observacoes } = req.body;
+    const empresa_id = req.empresa_id;
+
+    if (!nome || !cpf || !funcao) {
+      return res.status(400).json({ erro: 'Nome, CPF e função são obrigatórios' });
+    }
+
+    const cpfExiste = await Funcionario.buscarPorCpf(cpf, null, empresa_id);
+    if (cpfExiste) {
+      return res.status(409).json({ erro: 'CPF já cadastrado' });
+    }
+
+    // Determinar role pelo tipo de função
+    const roleName = (funcao === 'Motorista' || funcao === 'Conferente') ? 'motorista' : 'operador';
+
+    const client = await global.db.connect();
     try {
-      const { nome, cpf, funcao } = req.body;
+      await client.query('BEGIN');
 
-      if (!nome || !cpf || !funcao) {
-        return res.status(400).json({ erro: 'Nome, CPF e função são obrigatórios' });
+      // Buscar role_id
+      const roleResult = await client.query(
+        `SELECT id, nome FROM roles WHERE nome = $1 AND empresa_id = $2 LIMIT 1`,
+        [roleName, empresa_id]
+      );
+      if (!roleResult.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({ erro: `Role '${roleName}' não encontrada para esta empresa` });
+      }
+      const role = roleResult.rows[0];
+
+      // Gerar email único
+      const baseEmail = _emailBase(nome);
+      let email = `${baseEmail}@emp${empresa_id}.local`;
+
+      const emailExiste = await client.query(
+        `SELECT id FROM usuarios WHERE email = $1 LIMIT 1`,
+        [email]
+      );
+      if (emailExiste.rows.length) {
+        // Adiciona sufixo numérico até encontrar email disponível
+        const sufixo = Date.now().toString().slice(-4);
+        email = `${baseEmail}${sufixo}@emp${empresa_id}.local`;
       }
 
-      const cpfExiste = await Funcionario.buscarPorCpf(cpf, null, req.empresa_id);
-      if (cpfExiste) {
-        return res.status(409).json({ erro: 'CPF já cadastrado' });
-      }
+      // Gerar senha temporária
+      const senha = _gerarSenha();
+      const senhaHash = await bcrypt.hash(senha, 10);
 
-      const funcionario = await Funcionario.criar({ nome, cpf, funcao, empresa_id: req.empresa_id });
+      // Criar usuário
+      const usuarioResult = await client.query(
+        `INSERT INTO usuarios (email, nome, senha, role, role_id, empresa_id, ativo)
+         VALUES ($1, $2, $3, $4, $5, $6, true)
+         RETURNING id, email`,
+        [email, nome, senhaHash, role.nome, role.id, empresa_id]
+      );
+      const usuario_id = usuarioResult.rows[0].id;
+
+      // Criar funcionário vinculado
+      const funcionarioResult = await client.query(
+        `INSERT INTO funcionarios (nome, cpf, funcao, observacoes, usuario_id, empresa_id, ativo)
+         VALUES ($1, $2, $3, $4, $5, $6, true)
+         RETURNING *`,
+        [nome, cpf, funcao, observacoes || null, usuario_id, empresa_id]
+      );
+      const funcionario = funcionarioResult.rows[0];
+
+      await client.query('COMMIT');
+
       await salvarHistorico(req.user.id, 'criar', 'funcionarios', funcionario.id, null, funcionario);
-      res.status(201).json({ sucesso: true, funcionario });
+
+      return res.status(201).json({
+        sucesso: true,
+        funcionario,
+        credenciais_temporarias: {
+          email,
+          senha,
+          mensagem: 'Compartilhe essas credenciais com o funcionário. Ele poderá alterar a senha após o primeiro login.'
+        }
+      });
     } catch (err) {
+      await client.query('ROLLBACK');
       console.error('Erro ao criar funcionário:', err);
-      res.status(500).json({ erro: 'Erro ao criar funcionário' });
+      if (err.code === '23505') {
+        return res.status(409).json({ erro: 'CPF ou email já existe' });
+      }
+      return res.status(500).json({ erro: 'Erro ao criar funcionário' });
+    } finally {
+      client.release();
     }
   }
 

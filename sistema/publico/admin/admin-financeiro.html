@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Admin - Controle de Caminhões</title>
+  <link rel="stylesheet" href="/style_ultra_profissional.css">
+  <style>
+    .notificacao {
+      position: fixed; top: 20px; right: 20px;
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: white; padding: 16px 24px; border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <canvas id="background-canvas"></canvas>
+  <nav></nav>
+
+  <main>
+    <div class="tabs">
+      <button class="ativo" onclick="abrirAba('caminhoes')">Caminhões</button>
+      <button onclick="abrirAba('funcionarios')">Funcionários</button>
+      <button onclick="abrirAba('viagens')">Viagens</button>
+      <button onclick="abrirAba('historico')">Histórico</button>
+      <button onclick="abrirAba('notas')">Relatório de Notas</button>
+      <button onclick="abrirAba('financeiro'); carregarPainelFinanceiro()">💰 Financeiro</button>
+    </div>
+
+    <!-- CAMINHÕES -->
+    <div id="caminhoes" class="tab-content ativo">
+      <h2>Gerenciar Caminhões</h2>
+      <button onclick="abrirModalCaminhao()" style="margin-bottom:20px;">Novo Caminhão</button>
+      <div class="filtros">
+        <input type="text" id="filtroPlaca" placeholder="Filtrar por placa" onkeyup="carregarCaminhoes()">
+        <select id="filtroStatusCaminhao" onchange="carregarCaminhoes()">
+          <option value="">Todos os status</option>
+          <option value="disponivel">Disponível</option>
+          <option value="carregado">Carregado</option>
+          <option value="saiu_para_entrega">Saiu para Entrega</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Placa</th><th>Tipo</th><th>Status</th><th>Ativo</th><th>Ações</th></tr></thead>
+        <tbody id="tabelaCaminhoes"></tbody>
+      </table>
+    </div>
+
+    <!-- FUNCIONÁRIOS -->
+    <div id="funcionarios" class="tab-content">
+      <h2>Gerenciar Funcionários</h2>
+      <button onclick="abrirModalFuncionario()" style="margin-bottom:20px;">Novo Funcionário</button>
+      <div class="filtros">
+        <select id="filtroFuncao" onchange="carregarFuncionarios()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:10px 14px;border-radius:10px;font-size:14px;">
+          <option value="">Todos os tipos</option>
+          <option value="Motorista">Motoristas</option>
+          <option value="Conferente">Conferentes</option>
+          <option value="Carregador">Carregadores</option>
+          <option value="Administrativo">Administrativos</option>
+          <option value="Gerente">Gerentes</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th>Função / Tipo</th><th>Ativo</th><th>Ações</th></tr></thead>
+        <tbody id="tabelaFuncionarios"></tbody>
+      </table>
+    </div>
+
+    <!-- VIAGENS -->
+    <div id="viagens" class="tab-content">
+      <h2>Gerenciar Viagens</h2>
+      <button onclick="abrirModalCriarViagemAdmin()" style="margin-bottom:20px;padding:13px 26px;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;background:linear-gradient(135deg,#2563eb 0%,#3b82f6 100%);color:#0a0f1f;box-shadow:0 6px 20px rgba(37,99,235,0.35);">➕ Criar Nova Viagem</button>
+      <div class="filtros" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;margin-bottom:20px;">
+        <input type="text" id="filtroViagemBusca" placeholder="Buscar por ID, placa, rota..." onkeyup="buscarViagensAdmin()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+        <input type="date" id="dataInicioAdmin" onchange="buscarViagensPorDataAdmin()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+        <input type="date" id="dataFimAdmin" onchange="buscarViagensPorDataAdmin()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+        <select id="filtroStatusViagem" onchange="carregarViagensAdmin()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+          <option value="">Todos os status</option>
+          <option value="carregado">Carregado</option>
+          <option value="em_rota">Em Rota</option>
+          <option value="entregue">Entregue</option>
+          <option value="retorno_problema">Retorno com Problema</option>
+        </select>
+        <button onclick="limparFiltrosViagens()" style="padding:12px 24px;background:linear-gradient(135deg,#2563eb 0%,#3b82f6 100%);color:#0a0f1f;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;box-shadow:0 6px 20px rgba(37,99,235,0.35);">Limpar</button>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Caminhão</th><th>Motorista</th><th>Rota</th><th>Mercadoria</th><th>Status</th><th>Saída</th><th>Ações</th></tr></thead>
+        <tbody id="tabelaViagensAdmin"></tbody>
+      </table>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div id="historico" class="tab-content">
+      <h2>Histórico de Operações</h2>
+      <div class="filtros" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;margin-bottom:20px;">
+        <input type="date" id="dataInicio" onchange="carregarHistorico()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+        <input type="date" id="dataFim" onchange="carregarHistorico()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+        <select id="filtroTabelaHistorico" onchange="carregarHistorico()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+          <option value="">Todas as tabelas</option>
+          <option value="caminhoes">Caminhões</option>
+          <option value="motoristas">Motoristas</option>
+          <option value="funcionarios">Funcionários</option>
+          <option value="viagens">Viagens</option>
+        </select>
+        <button onclick="limparFiltrosHistorico()" style="padding:12px 24px;background:linear-gradient(135deg,#2563eb 0%,#3b82f6 100%);color:#0a0f1f;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;box-shadow:0 6px 20px rgba(37,99,235,0.35);">Limpar</button>
+      </div>
+      <div id="listaHistorico"></div>
+    </div>
+
+    <!-- RELATÓRIO DE NOTAS -->
+    <div id="notas" class="tab-content">
+      <h2>Relatório de Notas</h2>
+      <div class="filtros" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:24px;">
+        <input type="date" id="dataInicioNotas" onchange="carregarRelatorioNotas()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+        <input type="date" id="dataFimNotas" onchange="carregarRelatorioNotas()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;">
+        <button onclick="limparFiltroNotas()" style="padding:12px 24px;background:linear-gradient(135deg,#2563eb 0%,#3b82f6 100%);color:#0a0f1f;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;box-shadow:0 6px 20px rgba(37,99,235,0.35);">Limpar</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px;">
+        <div style="background:rgba(20,26,47,0.9);border:1.5px solid rgba(37,99,235,0.25);border-radius:14px;padding:24px;text-align:center;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:rgba(224,231,255,0.5);margin-bottom:8px;">Total de Notas</div><div id="notasTotal" style="font-size:36px;font-weight:800;color:#60a5fa;">0</div></div>
+        <div style="background:rgba(20,26,47,0.9);border:1.5px solid rgba(16,185,129,0.3);border-radius:14px;padding:24px;text-align:center;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:rgba(224,231,255,0.5);margin-bottom:8px;">Entregues</div><div id="notasEntregues" style="font-size:36px;font-weight:800;color:#10b981;">0</div></div>
+        <div style="background:rgba(20,26,47,0.9);border:1.5px solid rgba(239,68,68,0.3);border-radius:14px;padding:24px;text-align:center;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:rgba(224,231,255,0.5);margin-bottom:8px;">Retornadas</div><div id="notasRetornadas" style="font-size:36px;font-weight:800;color:#ef4444;">0</div></div>
+        <div style="background:rgba(20,26,47,0.9);border:1.5px solid rgba(245,158,11,0.3);border-radius:14px;padding:24px;text-align:center;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:rgba(224,231,255,0.5);margin-bottom:8px;">Em Andamento</div><div id="notasAndamento" style="font-size:36px;font-weight:800;color:#fbbf24;">0</div></div>
+      </div>
+      <div style="background:rgba(20,26,47,0.9);border:1.5px solid rgba(37,99,235,0.2);border-radius:14px;padding:28px;margin-bottom:32px;">
+        <h3 style="margin:0 0 20px;color:#e0e7ff;font-size:16px;text-transform:uppercase;letter-spacing:1px;">Desempenho das Notas Finalizadas</h3>
+        <div id="semDadosNotas" style="display:none;color:rgba(224,231,255,0.4);text-align:center;padding:16px;font-size:14px;">Nenhuma nota finalizada no período selecionado.</div>
+        <div id="graficosNotas">
+          <div style="margin-bottom:20px;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#10b981;font-weight:700;font-size:14px;">Entregues</span><span id="pctEntregues" style="color:#10b981;font-weight:800;font-size:18px;">0%</span></div><div style="background:rgba(10,15,31,0.6);border-radius:999px;height:14px;overflow:hidden;"><div id="barraEntregues" style="height:100%;width:0%;background:linear-gradient(90deg,#059669,#10b981);border-radius:999px;transition:width 0.8s ease;"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#ef4444;font-weight:700;font-size:14px;">Retornadas</span><span id="pctRetornadas" style="color:#ef4444;font-weight:800;font-size:18px;">0%</span></div><div style="background:rgba(10,15,31,0.6);border-radius:999px;height:14px;overflow:hidden;"><div id="barraRetornadas" style="height:100%;width:0%;background:linear-gradient(90deg,#b91c1c,#ef4444);border-radius:999px;transition:width 0.8s ease;"></div></div></div>
+        </div>
+      </div>
+      <h3 style="color:#e0e7ff;font-size:16px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Notas Retornadas</h3>
+      <table><thead><tr><th>ID</th><th>Nota Fiscal</th><th>Rota</th><th>Motorista</th><th>Caminhão</th><th>Motivo</th><th>Data Retorno</th></tr></thead><tbody id="tabelaRetornos"></tbody></table>
+    </div>
+
+    <!-- PAINEL FINANCEIRO -->
+    <div id="financeiro" class="tab-content">
+      <h2>Painel Financeiro</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem;">
+        <button onclick="carregarPainelFinanceiro('pronto_financeiro')"  style="padding:10px 18px;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">✓ Prontos</button>
+        <button onclick="carregarPainelFinanceiro('enviado_financeiro')" style="padding:10px 18px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">→ Enviados</button>
+        <button onclick="carregarPainelFinanceiro('aprovado')"           style="padding:10px 18px;background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">✅ Aprovados</button>
+        <button onclick="carregarPainelFinanceiro('rejeitado')"          style="padding:10px 18px;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">✗ Rejeitados</button>
+        <button onclick="carregarPainelFinanceiro()"                     style="padding:10px 18px;background:rgba(37,99,235,0.15);color:#60a5fa;border:1px solid rgba(37,99,235,0.3);border-radius:9px;font-weight:700;font-size:12px;cursor:pointer;text-transform:uppercase;">Todos</button>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;"><th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">ID</th><th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Caminhão</th><th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Motorista</th><th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Notas</th><th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Entregues</th><th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Realocadas</th><th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Status Fin.</th><th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Ações</th></tr></thead>
+        <tbody id="tabelaFinanceiro"></tbody>
+      </table>
+    </div>
+
+    <!-- MODAL REJEITAR -->
+    <div id="modalRejeitar" style="position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;display:none;justify-content:center;align-items:center;backdrop-filter:blur(6px);">
+      <div style="background:linear-gradient(135deg,#0a0f1f,#141a2f);padding:2.5rem;border-radius:14px;width:90%;max-width:480px;border:1px solid rgba(239,68,68,0.3);">
+        <h3 style="color:#ef4444;margin-bottom:1.5rem;font-size:20px;text-transform:uppercase;">✗ Rejeitar Carregamento</h3>
+        <input type="hidden" id="idRejeitar">
+        <div style="margin-bottom:1.2rem;"><label style="display:block;font-size:12px;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;">Motivo da rejeição</label><textarea id="motivoRejeitar" rows="3" placeholder="Descreva o motivo..." style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(239,68,68,0.3);color:#e0e7ff;padding:12px;border-radius:10px;font-size:14px;resize:vertical;font-family:inherit;"></textarea></div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button onclick="document.getElementById('modalRejeitar').style.display='none'" style="padding:11px 22px;background:rgba(100,116,139,0.2);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);border-radius:9px;font-weight:700;cursor:pointer;">Cancelar</button>
+          <button onclick="confirmarRejeitar()" style="padding:11px 22px;background:linear-gradient(135deg,#dc2626,#ef4444);color:white;border:none;border-radius:9px;font-weight:700;cursor:pointer;text-transform:uppercase;">Confirmar Rejeição</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL CAMINHÃO -->
+  <div id="modalCaminhao" class="modal">
+    <div class="modal-content">
+      <h3 id="tituloCaminhao">Novo Caminhão</h3>
+      <input type="hidden" id="idCaminhaoEdicao">
+      <div class="form-group"><label>Placa</label><input type="text" id="placaCaminhao"></div>
+      <div class="form-group"><label>Tipo</label><select id="tipoCaminhao"><option value="truck">Truck</option><option value="toco">Toco</option><option value="carreta">Carreta</option><option value="van">Van</option></select></div>
+      <div class="modal-buttons"><button class="btn-salvar" onclick="salvarCaminhao()">Salvar</button><button class="btn-cancelar" onclick="fecharModal('modalCaminhao')">Cancelar</button></div>
+    </div>
+  </div>
+
+  <!-- MODAL FUNCIONÁRIO -->
+  <div id="modalFuncionario" class="modal">
+    <div class="modal-content">
+      <h3 id="tituloFuncionario">Novo Funcionário</h3>
+      <input type="hidden" id="idFuncionarioEdicao">
+      <div class="form-group"><label>Nome</label><input type="text" id="nomeFuncionario"></div>
+      <div class="form-group"><label>CPF</label><input type="text" id="cpfFuncionario"></div>
+      <div class="form-group"><label>Função / Tipo</label><select id="funcaoFuncionario" style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:10px 14px;border-radius:10px;font-size:14px;"><option value="Motorista">Motorista</option><option value="Conferente">Conferente</option><option value="Carregador">Carregador</option><option value="Administrativo">Administrativo</option><option value="Gerente">Gerente</option></select></div>
+      <div class="form-group"><label>Observações</label><textarea id="obsFuncionario" rows="2" style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:10px 14px;border-radius:10px;font-size:14px;resize:vertical;" placeholder="Opcional"></textarea></div>
+      <p id="avisoLoginFuncionario" style="font-size:12px;color:#60a5fa;margin-bottom:8px;display:none;">ℹ️ Para Motorista/Conferente será gerado login automático.</p>
+      <div class="modal-buttons"><button class="btn-salvar" onclick="salvarFuncionario()">Salvar</button><button class="btn-cancelar" onclick="fecharModal('modalFuncionario')">Cancelar</button></div>
+    </div>
+  </div>
+
+  <!-- MODAL CREDENCIAIS -->
+  <div id="modalCredenciais" class="modal">
+    <div class="modal-content" style="text-align:center;max-width:420px;">
+      <div style="font-size:40px;margin-bottom:12px;">✅</div>
+      <h3 style="color:#10b981;margin-bottom:1.5rem;text-transform:uppercase;font-size:18px;">Funcionário Criado!</h3>
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:1.5rem;">Login gerado automaticamente. Compartilhe com o funcionário:</p>
+      <div style="background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;text-align:left;">
+        <div style="margin-bottom:12px;">
+          <span style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Email</span>
+          <div id="credEmail" style="font-size:15px;font-weight:700;color:#60a5fa;font-family:monospace;margin-top:4px;word-break:break-all;"></div>
+        </div>
+        <div>
+          <span style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Senha Temporária</span>
+          <div id="credSenha" style="font-size:22px;font-weight:800;color:#e0e7ff;font-family:monospace;letter-spacing:3px;margin-top:4px;"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button onclick="copiarCredenciais()" style="background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;border:none;padding:11px 22px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;">📋 Copiar</button>
+        <button onclick="fecharModalCredenciais()" style="background:rgba(100,116,139,0.2);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);padding:11px 22px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;">OK</button>
+      </div>
+      <p style="font-size:11px;color:#475569;margin-top:1rem;">O funcionário pode alterar a senha após o primeiro login.</p>
+    </div>
+  </div>
+
+  <!-- MODAL CRIAR VIAGEM -->
+  <div id="modalCriarViagemAdmin" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom:2rem;font-size:24px;color:#60a5fa;text-transform:uppercase;">➕ Criar Nova Viagem</h3>
+      <div class="form-group"><label>Caminhão</label><select id="caminhaoCriarAdmin" style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;"><option value="">Selecione o caminhão</option></select></div>
+      <div class="form-group"><label>Motorista</label><select id="motoristaCriarAdmin" style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;"><option value="">Selecione o motorista</option></select></div>
+      <div class="form-group"><label>Funcionário</label><select id="funcionarioCriarAdmin" style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;"><option value="">Selecione o funcionário</option></select></div>
+      <div class="form-group"><label>Rota</label><input type="text" id="rotaCriarAdmin" placeholder="Ex: São Paulo - Rio de Janeiro" style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;"></div>
+      <div class="form-group"><label>Mercadoria</label><input type="text" id="mercadoriaCriarAdmin" placeholder="Ex: Eletrônicos" style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;"></div>
+      <div class="form-group"><label>Nota Fiscal</label><input type="text" id="notaFiscalCriarAdmin" placeholder="Ex: NF-001" style="width:100%;background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:12px 16px;border-radius:10px;font-size:14px;"></div>
+      <div class="modal-buttons"><button class="btn-salvar" onclick="salvarViagemAdmin()">Criar Viagem</button><button class="btn-cancelar" onclick="fecharModal('modalCriarViagemAdmin')">Cancelar</button></div>
+    </div>
+  </div>
+
+  <!-- MODAL STATUS VIAGEM -->
+  <div id="modalStatusViagem" class="modal">
+    <div class="modal-content">
+      <h3>Atualizar Status da Viagem</h3>
+      <input type="hidden" id="idViagemAtualizar">
+      <div class="form-group"><label>Novo Status</label><select id="novoStatusViagemAdmin" onchange="mostrarCamposStatusAdmin()"><option value="saiu_para_entrega">Saiu para Entrega</option><option value="entregue">Entregue</option><option value="retorno_problema">Retorno com Problema</option></select></div>
+      <div id="camposProblemaAdmin" style="display:none;">
+        <div class="form-group"><label>Motivo</label><select id="motivoProblemaAdmin"><option value="">Selecione o motivo</option><option value="cliente_ausente">Cliente Ausente</option><option value="nota_invalida">Nota Fiscal Inválida</option><option value="mercadoria_recusada">Mercadoria Recusada</option><option value="veiculo_problema">Veículo com Problema</option><option value="outro">Outro</option></select></div>
+        <div class="form-group"><label>Observações</label><textarea id="obsProblemaAdmin" placeholder="Descreva o problema..."></textarea></div>
+      </div>
+      <div class="modal-buttons"><button class="btn-salvar" onclick="salvarStatusViagemAdmin()">Atualizar</button><button class="btn-cancelar" onclick="fecharModal('modalStatusViagem')">Cancelar</button></div>
+    </div>
+  </div>
+
+  <script src="/scripts/config-navbar.js"></script>
+  <script src="/scripts/navbar.js"></script>
+  <script>
+renderizarNavbar();
+const token = localStorage.getItem('token');
+const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+
+if (!token || usuario.role !== 'admin') {
+  alert('Acesso negado! Apenas administradores.');
+  window.location.href = '/admin/admin-dashboard.html';
+}
+
+// Canvas
+(function() {
+  const canvas = document.getElementById('background-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const ps = [];
+  class P { constructor() { this.x=Math.random()*canvas.width; this.y=Math.random()*canvas.height; this.s=Math.random()*2+.5; this.sx=(Math.random()-.5)*.5; this.sy=(Math.random()-.5)*.5; this.o=Math.random()*.5+.2; } u() { this.x+=this.sx; this.y+=this.sy; if(this.x>canvas.width)this.x=0; if(this.x<0)this.x=canvas.width; if(this.y>canvas.height)this.y=0; if(this.y<0)this.y=canvas.height; } d() { ctx.fillStyle=`rgba(59,130,246,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.s,0,Math.PI*2); ctx.fill(); } }
+  for(let i=0;i<50;i++) ps.push(new P());
+  (function a(){ ctx.clearRect(0,0,canvas.width,canvas.height); ps.forEach(p=>{p.u();p.d();}); requestAnimationFrame(a); })();
+  window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+}());
+
+// WebSocket
+let ws = null;
+function conectarWebSocket() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + window.location.host);
+  ws.onmessage = function(e) {
+    const msg = JSON.parse(e.data);
+    if (['viagem_criada','viagem_atualizada','viagem_cancelada'].includes(msg.evento)) {
+      carregarViagensAdmin();
+      mostrarNotificacao(msg.evento + ': ' + (msg.dados.rota || 'Viagem'));
+    }
+  };
+  ws.onclose = function() { setTimeout(conectarWebSocket, 3000); };
+}
+function mostrarNotificacao(msg) {
+  const n = document.createElement('div'); n.className = 'notificacao'; n.textContent = msg;
+  document.body.appendChild(n); setTimeout(() => n.remove(), 3000);
+}
+
+// Abas
+function abrirAba(nome) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('ativo'));
+  document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('ativo'));
+  document.getElementById(nome).classList.add('ativo');
+  event.target.classList.add('ativo');
+  if (nome === 'caminhoes')   carregarCaminhoes();
+  if (nome === 'funcionarios') carregarFuncionarios();
+  if (nome === 'viagens')     carregarViagensAdmin();
+  if (nome === 'historico')   carregarHistorico();
+  if (nome === 'notas')       carregarRelatorioNotas();
+}
+
+function fecharModal(id) { document.getElementById(id).classList.remove('ativo'); }
+
+// CAMINHÕES
+function abrirModalCaminhao(id) {
+  document.getElementById('idCaminhaoEdicao').value = id || '';
+  if (id) { document.getElementById('tituloCaminhao').textContent = 'Editar Caminhão'; var c = JSON.parse(sessionStorage.getItem('caminhao_'+id)||'null'); if(c){ document.getElementById('placaCaminhao').value=c.placa; document.getElementById('tipoCaminhao').value=c.tipo; } }
+  else { document.getElementById('tituloCaminhao').textContent='Novo Caminhão'; document.getElementById('placaCaminhao').value=''; document.getElementById('tipoCaminhao').value='truck'; }
+  document.getElementById('modalCaminhao').classList.add('ativo');
+}
+function salvarCaminhao() {
+  var id=document.getElementById('idCaminhaoEdicao').value, placa=document.getElementById('placaCaminhao').value, tipo=document.getElementById('tipoCaminhao').value;
+  if(!placa){ alert('Preencha a placa!'); return; }
+  fetch(id?'/api/caminhoes/'+id:'/api/caminhoes',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({placa,tipo})}).then(r=>r.json()).then(d=>{ if(d.erro){alert(d.erro);return;} fecharModal('modalCaminhao'); carregarCaminhoes(); });
+}
+function carregarCaminhoes() {
+  fetch('/api/caminhoes',{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(function(caminhoes){
+    var tbody=document.getElementById('tabelaCaminhoes'); tbody.innerHTML='';
+    caminhoes.forEach(function(c){
+      sessionStorage.setItem('caminhao_'+c.id,JSON.stringify(c));
+      var s=c.status==='disponivel'?'background:rgba(16,185,129,0.2);color:#10b981;':'background:rgba(37,99,235,0.2);color:#60a5fa;';
+      tbody.innerHTML+='<tr style="border-top:1px solid rgba(37,99,235,0.1);"><td style="padding:1.25rem;color:#e0e7ff;">'+c.id+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+c.placa+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+c.tipo+'</td><td style="padding:1.25rem;"><span style="'+s+'padding:8px 14px;border-radius:24px;font-size:11px;font-weight:800;text-transform:uppercase;display:inline-block;">'+c.status+'</span></td><td style="padding:1.25rem;color:#e0e7ff;">'+(c.ativo?'Sim':'Não')+'</td><td style="padding:1.25rem;"><button onclick="abrirModalCaminhao('+c.id+')" style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Editar</button><button onclick="deletarCaminhao('+c.id+')" style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Deletar</button></td></tr>';
+    });
+  });
+}
+function deletarCaminhao(id) { if(confirm('Tem certeza?')){ fetch('/api/caminhoes/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+token}}).then(function(){carregarCaminhoes();}); } }
+
+// FUNCIONÁRIOS
+function abrirModalFuncionario(id) {
+  document.getElementById('idFuncionarioEdicao').value=id||'';
+  document.getElementById('obsFuncionario').value='';
+  if(id){
+    document.getElementById('tituloFuncionario').textContent='Editar Funcionário';
+    document.getElementById('avisoLoginFuncionario').style.display='none';
+    var f=JSON.parse(sessionStorage.getItem('funcionario_'+id)||'null');
+    if(f){ document.getElementById('nomeFuncionario').value=f.nome; document.getElementById('cpfFuncionario').value=f.cpf; document.getElementById('funcaoFuncionario').value=f.funcao; }
+  } else {
+    document.getElementById('tituloFuncionario').textContent='Novo Funcionário';
+    document.getElementById('nomeFuncionario').value='';
+    document.getElementById('cpfFuncionario').value='';
+    document.getElementById('funcaoFuncionario').value='Motorista';
+    document.getElementById('avisoLoginFuncionario').style.display='block';
+  }
+  document.getElementById('modalFuncionario').classList.add('ativo');
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var selFuncao=document.getElementById('funcaoFuncionario');
+  if(selFuncao) selFuncao.addEventListener('change', function(){
+    var aviso=document.getElementById('avisoLoginFuncionario');
+    var editando=document.getElementById('idFuncionarioEdicao').value;
+    if(!editando) aviso.style.display=(this.value==='Motorista'||this.value==='Conferente')?'block':'none';
+  });
+});
+function salvarFuncionario() {
+  var id=document.getElementById('idFuncionarioEdicao').value;
+  var nome=document.getElementById('nomeFuncionario').value.trim();
+  var cpf=document.getElementById('cpfFuncionario').value.trim();
+  var funcao=document.getElementById('funcaoFuncionario').value;
+  var obs=document.getElementById('obsFuncionario').value.trim();
+  if(!nome||!cpf||!funcao){ alert('Preencha todos os campos!'); return; }
+  var method=id?'PUT':'POST', url=id?'/api/funcionarios/'+id:'/api/funcionarios';
+  var body=id?{nome,cpf,funcao}:{nome,cpf,funcao,observacoes:obs};
+  fetch(url,{method:method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(body)})
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,data:d}; }); })
+    .then(function(res){
+      if(!res.ok){ alert(res.data.erro||'Erro ao salvar'); return; }
+      fecharModal('modalFuncionario');
+      carregarFuncionarios();
+      if(!id && res.data.credenciais_temporarias){
+        var cred=res.data.credenciais_temporarias;
+        document.getElementById('credEmail').textContent=cred.email;
+        document.getElementById('credSenha').textContent=cred.senha;
+        document.getElementById('modalCredenciais').classList.add('ativo');
+      }
+    })
+    .catch(function(){ alert('Erro de conexão'); });
+}
+function copiarCredenciais(){
+  var email=document.getElementById('credEmail').textContent;
+  var senha=document.getElementById('credSenha').textContent;
+  navigator.clipboard.writeText('Email: '+email+'\nSenha: '+senha)
+    .then(function(){ alert('Credenciais copiadas!'); })
+    .catch(function(){ alert('Email: '+email+' | Senha: '+senha); });
+}
+function fecharModalCredenciais(){ document.getElementById('modalCredenciais').classList.remove('ativo'); }
+function carregarFuncionarios() {
+  var filtro=document.getElementById('filtroFuncao')?document.getElementById('filtroFuncao').value:'';
+  fetch('/api/funcionarios'+(filtro?'?funcao='+encodeURIComponent(filtro):''),{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(function(list){
+    var tbody=document.getElementById('tabelaFuncionarios'); tbody.innerHTML='';
+    if(!list.length){ tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:rgba(224,231,255,0.4);">Nenhum funcionário encontrado</td></tr>'; return; }
+    list.forEach(function(f){
+      sessionStorage.setItem('funcionario_'+f.id,JSON.stringify(f));
+      var bg=f.funcao==='Motorista'?'background:rgba(16,185,129,0.15);color:#10b981;':f.funcao==='Gerente'?'background:rgba(245,158,11,0.15);color:#fbbf24;':'background:rgba(37,99,235,0.15);color:#60a5fa;';
+      tbody.innerHTML+='<tr style="border-top:1px solid rgba(37,99,235,0.1);"><td style="padding:1.25rem;color:#e0e7ff;">'+f.id+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+f.nome+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+f.cpf+'</td><td style="padding:1.25rem;"><span style="'+bg+'padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;">'+f.funcao+'</span></td><td style="padding:1.25rem;color:#e0e7ff;">'+(f.ativo?'Sim':'Não')+'</td><td style="padding:1.25rem;"><button onclick="abrirModalFuncionario('+f.id+')" style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Editar</button><button onclick="deletarFuncionario('+f.id+')" style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Deletar</button></td></tr>';
+    });
+  });
+}
+function deletarFuncionario(id) { if(confirm('Tem certeza?')){ fetch('/api/funcionarios/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+token}}).then(function(){carregarFuncionarios();}); } }
+
+// VIAGENS
+function abrirModalCriarViagemAdmin() { document.getElementById('modalCriarViagemAdmin').classList.add('ativo'); carregarSelectsAdmin(); }
+function carregarSelectsAdmin() {
+  Promise.all([fetch('/api/caminhoes',{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()),fetch('/api/funcionarios?funcao=Motorista',{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()),fetch('/api/funcionarios',{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json())]).then(function(res){
+    var sc=document.getElementById('caminhaoCriarAdmin'), sm=document.getElementById('motoristaCriarAdmin'), sf=document.getElementById('funcionarioCriarAdmin');
+    sc.innerHTML='<option value="">Selecione o caminhão</option>'; res[0].forEach(c=>{if(c.status==='disponivel')sc.innerHTML+='<option value="'+c.id+'">'+c.placa+' ('+c.tipo+')</option>';});
+    sm.innerHTML='<option value="">Selecione o motorista</option>'; res[1].forEach(m=>sm.innerHTML+='<option value="'+m.id+'">'+m.nome+'</option>');
+    sf.innerHTML='<option value="">Selecione o funcionário</option>'; res[2].filter(f=>f.funcao!=='Motorista').forEach(f=>sf.innerHTML+='<option value="'+f.id+'">'+f.nome+' ('+f.funcao+')</option>');
+  });
+}
+function salvarViagemAdmin() {
+  var cid=document.getElementById('caminhaoCriarAdmin').value, mid=document.getElementById('motoristaCriarAdmin').value, fid=document.getElementById('funcionarioCriarAdmin').value, rota=document.getElementById('rotaCriarAdmin').value, merc=document.getElementById('mercadoriaCriarAdmin').value, nf=document.getElementById('notaFiscalCriarAdmin').value;
+  if(!cid||!mid||!fid||!rota||!merc||!nf){ alert('Preencha todos os campos!'); return; }
+  fetch('/api/viagens',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({caminhao_id:parseInt(cid),motorista_id:parseInt(mid),funcionario_id:parseInt(fid),rota,mercadoria:merc,nota_fiscal:nf})}).then(r=>r.json()).then(d=>{ if(d.erro){alert(d.erro);return;} fecharModal('modalCriarViagemAdmin'); mostrarNotificacao('✅ Viagem criada!'); carregarViagensAdmin(); });
+}
+function carregarViagensAdmin() {
+  fetch('/api/viagens',{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(function(viagens){
+    var tbody=document.getElementById('tabelaViagensAdmin'); tbody.innerHTML='';
+    viagens.forEach(function(v){
+      var s=v.status==='entregue'?'background:rgba(16,185,129,0.2);color:#10b981;':v.status==='retorno_problema'?'background:rgba(239,68,68,0.2);color:#ef4444;':v.status==='carregado'?'background:rgba(245,158,11,0.2);color:#fbbf24;':'background:rgba(37,99,235,0.2);color:#60a5fa;';
+      tbody.innerHTML+='<tr style="border-top:1px solid rgba(37,99,235,0.1);"><td style="padding:1.25rem;color:#e0e7ff;">'+v.id+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+v.placa+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+v.motorista+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+v.rota+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+(v.mercadoria||'-')+'</td><td style="padding:1.25rem;"><span style="'+s+'padding:8px 14px;border-radius:24px;font-size:11px;font-weight:800;text-transform:uppercase;display:inline-block;">'+v.status+'</span></td><td style="padding:1.25rem;color:#e0e7ff;">'+(v.data_saida?v.data_saida.substring(0,10):'-')+'</td><td style="padding:1.25rem;"><button style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;" onclick="abrirModalAtualizarViagem('+v.id+')">Atualizar</button></td></tr>';
+    });
+  });
+}
+function abrirModalAtualizarViagem(id){ document.getElementById('idViagemAtualizar').value=id; document.getElementById('novoStatusViagemAdmin').value='saiu_para_entrega'; document.getElementById('camposProblemaAdmin').style.display='none'; document.getElementById('modalStatusViagem').classList.add('ativo'); }
+function mostrarCamposStatusAdmin(){ document.getElementById('camposProblemaAdmin').style.display=document.getElementById('novoStatusViagemAdmin').value==='retorno_problema'?'block':'none'; }
+function salvarStatusViagemAdmin(){
+  var id=document.getElementById('idViagemAtualizar').value, status=document.getElementById('novoStatusViagemAdmin').value, motivo=document.getElementById('motivoProblemaAdmin').value, obs=document.getElementById('obsProblemaAdmin').value;
+  var body={status}; if(status==='retorno_problema'){ if(!motivo){alert('Selecione um motivo!');return;} body.motivo_retorno=motivo; body.observacoes_retorno=obs; }
+  fetch('/api/viagens/'+id,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(body)}).then(r=>r.json()).then(d=>{ if(d.erro){alert('Erro: '+d.erro);return;} fecharModal('modalStatusViagem'); carregarViagensAdmin(); });
+}
+function buscarViagensAdmin(){ var t=document.getElementById('filtroViagemBusca').value; if(!t){carregarViagensAdmin();return;} fetch('/api/viagens/buscar/'+encodeURIComponent(t),{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(function(viagens){ document.getElementById('tabelaViagensAdmin').innerHTML=viagens&&viagens.length?viagens.map(v=>`<tr><td style="padding:1.25rem;color:#e0e7ff;">${v.id}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.placa}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.motorista}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.rota}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.mercadoria||'-'}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.status}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.data_saida?v.data_saida.substring(0,10):'-'}</td><td style="padding:1.25rem;"><button style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;" onclick="abrirModalAtualizarViagem(${v.id})">Atualizar</button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:2rem;color:rgba(224,231,255,0.5);">Nenhuma viagem encontrada</td></tr>'; }); }
+function buscarViagensPorDataAdmin(){ var di=document.getElementById('dataInicioAdmin').value, df=document.getElementById('dataFimAdmin').value; if(!di||!df)return; fetch('/api/viagens/data/'+di+'/'+df,{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(viagens=>{ document.getElementById('tabelaViagensAdmin').innerHTML=viagens&&viagens.length?viagens.map(v=>`<tr><td style="padding:1.25rem;color:#e0e7ff;">${v.id}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.placa}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.motorista}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.rota}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.mercadoria||'-'}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.status}</td><td style="padding:1.25rem;color:#e0e7ff;">${v.data_saida?v.data_saida.substring(0,10):'-'}</td><td style="padding:1.25rem;"><button style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;" onclick="abrirModalAtualizarViagem(${v.id})">Atualizar</button></td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;padding:2rem;color:rgba(224,231,255,0.5);">Nenhuma viagem no período</td></tr>'; }); }
+function limparFiltrosViagens(){ ['filtroViagemBusca','dataInicioAdmin','dataFimAdmin'].forEach(id=>document.getElementById(id).value=''); document.getElementById('filtroStatusViagem').value=''; carregarViagensAdmin(); }
+
+// HISTÓRICO
+function carregarHistorico(){
+  var di=document.getElementById('dataInicio').value, df=document.getElementById('dataFim').value, t=document.getElementById('filtroTabelaHistorico').value;
+  var url='/api/admin/historico'; var p=[]; if(di)p.push('dataInicio='+di); if(df)p.push('dataFim='+df); if(t)p.push('tabela='+t); if(p.length)url+='?'+p.join('&');
+  fetch(url,{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(function(h){
+    var div=document.getElementById('listaHistorico'); div.innerHTML='';
+    if(!Array.isArray(h)){div.innerHTML='<p style="text-align:center;padding:20px;color:#ef4444;">Erro: '+(h.erro||'resposta inesperada')+'</p>';return;}
+    if(!h.length){div.innerHTML='<p style="text-align:center;padding:20px;color:rgba(226,232,240,0.5);">Nenhum registro encontrado</p>';return;}
+    div.innerHTML='<p style="color:#60a5fa;margin-bottom:1rem;font-weight:700;">'+h.length+' registro(s)</p>'+h.map(item=>{
+      var ab=item.acao==='criar'?'background:rgba(16,185,129,0.15);color:#10b981;':item.acao==='deletar'?'background:rgba(239,68,68,0.15);color:#ef4444;':'background:rgba(245,158,11,0.15);color:#fbbf24;';
+      return '<div style="background:rgba(20,26,47,0.8);border:1px solid rgba(37,99,235,0.15);padding:1.5rem;border-radius:10px;margin-bottom:1rem;border-left:5px solid #3b82f6;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><span><span style="'+ab+'padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;display:inline-block;margin-right:10px;">'+item.acao+'</span>em <strong>'+item.tabela+'</strong> (ID: '+item.registro_id+')</span><span style="color:#60a5fa;font-size:12px;">'+(item.usuario||'Sistema')+'</span></div><div style="font-size:13px;color:rgba(224,231,255,0.6);line-height:1.8;"><strong>Data:</strong> '+new Date(item.data_hora).toLocaleString('pt-BR')+'</div></div>';
+    }).join('');
+  }).catch(err=>{document.getElementById('listaHistorico').innerHTML='<p style="text-align:center;padding:20px;color:#ef4444;">Erro de conexão</p>';});
+}
+function limparFiltrosHistorico(){ ['dataInicio','dataFim'].forEach(id=>document.getElementById(id).value=''); document.getElementById('filtroTabelaHistorico').value=''; carregarHistorico(); }
+
+// RELATÓRIO DE NOTAS
+function carregarRelatorioNotas(){
+  var di=document.getElementById('dataInicioNotas').value, df=document.getElementById('dataFimNotas').value;
+  var url='/api/admin/relatorio/notas'; var p=[]; if(di)p.push('dataInicio='+di); if(df)p.push('dataFim='+df); if(p.length)url+='?'+p.join('&');
+  fetch(url,{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(function(data){
+    var r=data.resumo;
+    document.getElementById('notasTotal').textContent=r.total;
+    document.getElementById('notasEntregues').textContent=r.totalEntregues;
+    document.getElementById('notasRetornadas').textContent=r.totalRetornadas;
+    document.getElementById('notasAndamento').textContent=r.totalEmAndamento;
+    if(r.totalFinalizadas===0){ document.getElementById('semDadosNotas').style.display='block'; document.getElementById('graficosNotas').style.display='none'; }
+    else{ document.getElementById('semDadosNotas').style.display='none'; document.getElementById('graficosNotas').style.display='block'; document.getElementById('pctEntregues').textContent=r.porcentagemEntregues+'%'; document.getElementById('pctRetornadas').textContent=r.porcentagemRetornadas+'%'; setTimeout(function(){document.getElementById('barraEntregues').style.width=r.porcentagemEntregues+'%'; document.getElementById('barraRetornadas').style.width=r.porcentagemRetornadas+'%';},50); }
+    var tbody=document.getElementById('tabelaRetornos'); tbody.innerHTML='';
+    if(!data.detalhesRetorno.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:rgba(224,231,255,0.4);">Nenhuma nota retornada</td></tr>'; }
+    else{ data.detalhesRetorno.forEach(function(n){ tbody.innerHTML+='<tr style="border-top:1px solid rgba(37,99,235,0.1);"><td style="padding:1rem;color:#e0e7ff;">'+n.id+'</td><td style="padding:1rem;color:#e0e7ff;">'+(n.nota_fiscal||'-')+'</td><td style="padding:1rem;color:#e0e7ff;">'+(n.rota||'-')+'</td><td style="padding:1rem;color:#e0e7ff;">'+(n.motorista||'-')+'</td><td style="padding:1rem;color:#e0e7ff;">'+(n.caminhao||'-')+'</td><td style="padding:1rem;"><span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;">'+(n.motivo_retorno||'Não informado')+'</span></td><td style="padding:1rem;color:#e0e7ff;">'+(n.data_retorno?n.data_retorno.substring(0,10):'-')+'</td></tr>'; }); }
+  });
+}
+function limparFiltroNotas(){ ['dataInicioNotas','dataFimNotas'].forEach(id=>document.getElementById(id).value=''); document.getElementById('barraEntregues').style.width='0%'; document.getElementById('barraRetornadas').style.width='0%'; carregarRelatorioNotas(); }
+
+// FINANCEIRO
+const sfTexto = { pendente:'Pendente', pronto_financeiro:'✓ Pronto', enviado_financeiro:'→ Enviado', aprovado:'✅ Aprovado', rejeitado:'✗ Rejeitado' };
+const sfCor   = { pendente:'#94a3b8', pronto_financeiro:'#10b981', enviado_financeiro:'#f59e0b', aprovado:'#818cf8', rejeitado:'#ef4444' };
+async function carregarPainelFinanceiro(filtro){
+  const url=filtro?`/api/carregamentos/financeiro?status_financeiro=${filtro}`:'/api/carregamentos/financeiro';
+  const resp=await fetch(url,{headers:{'Authorization':'Bearer '+token}}); const data=await resp.json(); const lista=data.dados||[];
+  const tbody=document.getElementById('tabelaFinanceiro'); tbody.innerHTML='';
+  if(!lista.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:#64748b;">Nenhum carregamento neste status.</td></tr>'; return; }
+  lista.forEach(function(c){
+    const sf=c.status_financeiro||'pendente', cor=sfCor[sf]||'#94a3b8', total=parseInt(c.total_notas)||0, entregues=parseInt(c.notas_entregues)||0, realocadas=parseInt(c.notas_realocadas)||0, pct=total>0?((entregues/total)*100).toFixed(1):'0.0';
+    const podeMover=sf==='pronto_financeiro', podeAprovar=['pronto_financeiro','enviado_financeiro'].includes(sf), podeRejeitar=['pronto_financeiro','enviado_financeiro'].includes(sf);
+    tbody.innerHTML+=`<tr style="border-bottom:1px solid rgba(37,99,235,0.08);">
+      <td style="padding:12px 10px;color:#60a5fa;font-weight:700;">#${c.id}</td>
+      <td style="padding:12px 10px;">${c.placa||'—'}</td>
+      <td style="padding:12px 10px;">${c.motorista_nome||'—'}</td>
+      <td style="padding:12px 10px;">${total}</td>
+      <td style="padding:12px 10px;color:#10b981;">${entregues} <small style="color:#64748b;">(${pct}%)</small></td>
+      <td style="padding:12px 10px;color:#a78bfa;">${realocadas}</td>
+      <td style="padding:12px 10px;"><span style="background:${cor}22;color:${cor};border:1px solid ${cor}44;padding:4px 10px;border-radius:16px;font-size:11px;font-weight:700;">${sfTexto[sf]||sf}</span></td>
+      <td style="padding:12px 10px;">
+        ${podeMover?`<button onclick="atualizarFinanceiro(${c.id},'enviado_financeiro')" style="padding:7px 12px;background:rgba(245,158,11,0.2);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px;text-transform:uppercase;">→ Enviar</button>`:''}
+        ${podeAprovar?`<button onclick="atualizarFinanceiro(${c.id},'aprovado')" style="padding:7px 12px;background:rgba(99,102,241,0.2);color:#818cf8;border:1px solid rgba(99,102,241,0.3);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px;text-transform:uppercase;">✅ Aprovar</button>`:''}
+        ${podeRejeitar?`<button onclick="abrirModalRejeitar(${c.id})" style="padding:7px 12px;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;">✗ Rejeitar</button>`:''}
+      </td>
+    </tr>`;
+  });
+}
+async function atualizarFinanceiro(id, sf){
+  const resp=await fetch(`/api/carregamentos/${id}/status-financeiro`,{method:'PUT',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({status_financeiro:sf})});
+  const data=await resp.json(); if(data.erro){alert(data.erro);return;} carregarPainelFinanceiro();
+}
+function abrirModalRejeitar(id){ document.getElementById('idRejeitar').value=id; document.getElementById('motivoRejeitar').value=''; document.getElementById('modalRejeitar').style.display='flex'; }
+async function confirmarRejeitar(){
+  const id=document.getElementById('idRejeitar').value, motivo=document.getElementById('motivoRejeitar').value.trim();
+  const resp=await fetch(`/api/carregamentos/${id}/status-financeiro`,{method:'PUT',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({status_financeiro:'rejeitado',motivo_rejeicao:motivo})});
+  const data=await resp.json(); document.getElementById('modalRejeitar').style.display='none'; if(data.erro){alert(data.erro);return;} carregarPainelFinanceiro();
+}
+
+carregarCaminhoes();
+conectarWebSocket();
+  </script>
+</body>
+</html>

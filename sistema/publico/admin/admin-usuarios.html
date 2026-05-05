@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciar Usuários - Admin</title>
+  <link rel="stylesheet" href="/style_ultra_profissional.css">
+  <style>
+    .notificacao { position:fixed;top:20px;right:20px;padding:14px 22px;border-radius:10px;font-size:14px;font-weight:700;z-index:10000;display:none;max-width:380px;animation:slideIn 0.3s ease-out;box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+    .notif-ok   { background:linear-gradient(135deg,#059669,#10b981);color:white; }
+    .notif-erro { background:linear-gradient(135deg,#dc2626,#ef4444);color:white; }
+    @keyframes slideIn { from{transform:translateX(400px);opacity:0;}to{transform:translateX(0);opacity:1;} }
+    .tabs{display:flex;gap:4px;margin-bottom:2rem;border-bottom:1px solid rgba(37,99,235,0.15);padding-bottom:0;}
+    .aba-btn{padding:12px 24px;background:none;border:none;color:#64748b;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;transition:all 0.2s;}
+    .aba-btn:hover{color:#e0e7ff;}
+    .aba-btn.ativa{color:#60a5fa;border-bottom-color:#2563eb;}
+    .aba-conteudo{display:none;}
+    .aba-conteudo.ativa{display:block;}
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.2rem;background:linear-gradient(135deg,#0d1220,#141a2f);border:1px solid rgba(37,99,235,0.15);border-radius:14px;padding:2rem;margin-bottom:1.5rem;}
+    .form-field{display:flex;flex-direction:column;gap:6px;}
+    .form-field label{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;}
+    .form-field input,.form-field select{background:rgba(10,15,31,0.7);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:11px 14px;border-radius:10px;font-size:14px;}
+    .form-field input:focus,.form-field select:focus{outline:none;border-color:rgba(37,99,235,0.6);}
+    .form-field select option{background:#141a2f;}
+    .btn-primario{padding:12px 28px;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;box-shadow:0 6px 20px rgba(37,99,235,0.3);transition:opacity 0.2s;}
+    .btn-primario:hover{opacity:0.9;}
+    .btn-primario:disabled{opacity:0.4;cursor:not-allowed;}
+    .btn-acao{padding:6px 12px;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:4px;}
+    .btn-editar    {background:rgba(37,99,235,0.2);color:#60a5fa;border:1px solid rgba(37,99,235,0.3);}
+    .btn-permissoes{background:rgba(99,102,241,0.2);color:#818cf8;border:1px solid rgba(99,102,241,0.3);}
+    .btn-deletar   {background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.25);}
+    .btn-cancelar  {background:rgba(100,116,139,0.2);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;}
+    .filtro-bar{display:flex;align-items:center;gap:12px;margin-bottom:1.2rem;flex-wrap:wrap;}
+    .filtro-bar select{background:rgba(10,15,31,0.7);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:10px 14px;border-radius:10px;font-size:13px;}
+    .modal-over{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:2000;display:none;justify-content:center;align-items:center;backdrop-filter:blur(6px);}
+    .modal-over.ativo{display:flex;}
+    .modal-box{background:linear-gradient(135deg,#0a0f1f,#141a2f);padding:2.5rem;border-radius:14px;width:90%;max-width:560px;box-shadow:0 10px 40px rgba(0,0,0,0.6);border:1px solid rgba(37,99,235,0.2);max-height:88vh;overflow-y:auto;}
+    .modal-box.modal-wide{max-width:680px;}
+    .modal-box h3{font-size:20px;color:#60a5fa;text-transform:uppercase;margin-bottom:1.8rem;}
+    .modal-buttons{display:flex;gap:12px;justify-content:flex-end;margin-top:1.5rem;}
+    .checkbox-label{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;border-bottom:1px solid rgba(37,99,235,0.06);}
+    .checkbox-label:hover{background:rgba(37,99,235,0.04);}
+    .checkbox-label input[type="checkbox"]{width:16px;height:16px;accent-color:#2563eb;cursor:pointer;}
+    .check-acao{font-size:12px;font-weight:700;color:#e0e7ff;min-width:130px;}
+    .check-desc{font-size:12px;color:#64748b;}
+    table{width:100%;border-collapse:collapse;}
+    thead tr{background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;}
+    thead th{padding:1rem;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;}
+    .senha-hint{font-size:11px;color:#475569;margin-top:4px;}
+    .perm-grupo{margin-bottom:1.4rem;}
+    .perm-modulo{font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;padding:6px 0;border-bottom:1px solid rgba(37,99,235,0.15);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+    .perm-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(37,99,235,0.05);}
+    .perm-acao{font-size:12px;font-weight:700;color:#e0e7ff;min-width:130px;}
+    .perm-desc{font-size:12px;color:#64748b;}
+    .badge-role{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(37,99,235,0.2);color:#60a5fa;text-transform:uppercase;}
+    .badge-extra{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,0.2);color:#10b981;text-transform:uppercase;}
+    .btn-mini{padding:3px 8px;border:1px solid rgba(37,99,235,0.3);border-radius:6px;background:rgba(37,99,235,0.1);color:#93c5fd;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;}
+    .btn-mini:hover{background:rgba(37,99,235,0.25);}
+  </style>
+</head>
+<body>
+
+  <canvas id="background-canvas"></canvas>
+  <nav></nav>
+
+  <div id="notificacao" class="notificacao notif-ok"></div>
+
+  <main>
+    <h2>Gerenciar Usuários</h2>
+
+    <div class="tabs">
+      <button class="aba-btn" data-aba="criar"  onclick="abrirAba('criar')">➕ Criar Usuário</button>
+      <button class="aba-btn" data-aba="listar" onclick="abrirAba('listar')">👥 Listar Usuários</button>
+      <button class="aba-btn" data-aba="roles"  onclick="abrirAba('roles')">🔐 Gerenciar Roles</button>
+    </div>
+
+    <!-- ABA CRIAR -->
+    <div id="aba-criar" class="aba-conteudo">
+      <h3 style="margin-bottom:1.5rem;color:#e0e7ff;">Novo Usuário</h3>
+      <form id="formCriar" onsubmit="event.preventDefault(); criarUsuario();">
+        <div class="form-grid">
+          <div class="form-field"><label>Email</label><input type="email" id="novoEmail" placeholder="usuario@empresa.com" required></div>
+          <div class="form-field"><label>Nome completo</label><input type="text" id="novoNome" placeholder="João Silva" required></div>
+          <div class="form-field"><label>Senha</label><input type="password" id="novaSenha" placeholder="Mínimo 6 caracteres" required><span class="senha-hint">Mínimo 6 caracteres</span></div>
+          <div class="form-field"><label>Role / Perfil de acesso</label><select id="novoRole" required><option value="">Carregando roles...</option></select></div>
+        </div>
+        <button type="submit" id="btnCriar" class="btn-primario">Criar Usuário</button>
+      </form>
+    </div>
+
+    <!-- ABA LISTAR -->
+    <div id="aba-listar" class="aba-conteudo">
+      <div class="filtro-bar">
+        <label>Filtrar por role:</label>
+        <select id="filtroRole" onchange="listarUsuarios()">
+          <option value="">Todos</option>
+          <option value="admin">Admin</option>
+          <option value="operador">Operador</option>
+          <option value="motorista">Motorista</option>
+        </select>
+        <button class="btn-primario" onclick="listarUsuarios()" style="padding:10px 20px;font-size:12px;">Atualizar</button>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Email</th><th>Nome</th><th>Role</th><th>Criado em</th><th>Ações</th></tr></thead>
+        <tbody id="corpoTabela"><tr><td colspan="6" style="text-align:center;padding:2rem;color:#64748b;">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- ABA ROLES -->
+    <div id="aba-roles" class="aba-conteudo">
+      <p style="color:#64748b;font-size:13px;margin-bottom:1.5rem;">Gerencie as permissões de cada perfil. Alterações afetam todos os usuários com aquele perfil.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Nome</th><th>Descrição</th><th>Permissões</th><th>Usuários</th><th>Ações</th></tr></thead>
+        <tbody id="corpoRoles"><tr><td colspan="6" style="text-align:center;padding:2rem;color:#64748b;">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- MODAL EDITAR USUÁRIO -->
+  <div id="modalEditar" class="modal-over">
+    <div class="modal-box">
+      <h3>✏️ Editar Usuário</h3>
+      <div class="form-field" style="margin-bottom:1.2rem;"><label>Email</label><input type="email" id="editEmail"></div>
+      <div class="form-field" style="margin-bottom:1.2rem;"><label>Nome</label><input type="text" id="editNome"></div>
+      <div class="form-field" style="margin-bottom:1.2rem;"><label>Nova senha (deixe em branco para manter)</label><input type="password" id="editSenha" placeholder="Nova senha (opcional)"></div>
+      <div class="form-field" style="margin-bottom:1.2rem;"><label>Role</label><select id="editRole"><option value="">Carregando...</option></select></div>
+      <div class="modal-buttons"><button class="btn-cancelar" onclick="fecharModal('modalEditar')">Cancelar</button><button class="btn-primario" onclick="salvarEdicao()">Salvar</button></div>
+    </div>
+  </div>
+
+  <!-- MODAL PERMISSÕES INDIVIDUAIS DO USUÁRIO -->
+  <div id="modalPermissoes" class="modal-over">
+    <div class="modal-box modal-wide">
+      <h3 id="tituloPermissoes">Permissões</h3>
+      <p style="color:#64748b;font-size:12px;margin-bottom:1.2rem;">
+        Permissões <span class="badge-role">role</span> vêm da role do usuário e não podem ser removidas aqui.
+        Permissões <span class="badge-extra">extra</span> são individuais e podem ser adicionadas ou removidas.
+      </p>
+      <div id="listaPermissoes"><p style="color:#64748b;">Carregando...</p></div>
+      <div class="modal-buttons">
+        <button class="btn-cancelar" onclick="fecharModal('modalPermissoes')">Cancelar</button>
+        <button class="btn-primario" id="btnSalvarPermissoes" onclick="salvarPermissoesUsuario()">Salvar Permissões</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR PERMISSÕES ROLE -->
+  <div id="modalEditarRole" class="modal-over">
+    <div class="modal-box modal-wide">
+      <h3 id="tituloEditarRole">Editar Permissões</h3>
+      <p style="color:#64748b;font-size:12px;margin-bottom:1.2rem;">Selecione as permissões desta role. As alterações afetam imediatamente todos os usuários com este perfil.</p>
+      <div id="checkboxPermissoes"><p style="color:#64748b;">Carregando...</p></div>
+      <div class="modal-buttons"><button class="btn-cancelar" onclick="fecharModal('modalEditarRole')">Cancelar</button><button class="btn-primario" onclick="salvarPermissoesRole()">Salvar Permissões</button></div>
+    </div>
+  </div>
+
+  <script src="/scripts/config-navbar.js"></script>
+  <script src="/scripts/navbar.js"></script>
+  <script>
+  renderizarNavbar();
+  const _authToken = localStorage.getItem('token');
+  const _authUser  = JSON.parse(localStorage.getItem('usuario') || '{}');
+  if (!_authToken || _authUser.role !== 'admin') window.location.href = '/login.html';
+  </script>
+  <script>
+  (function() {
+    const canvas = document.getElementById('background-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const ps = [];
+    class P { constructor(){this.x=Math.random()*canvas.width;this.y=Math.random()*canvas.height;this.s=Math.random()*3+1;this.sx=(Math.random()-.5)*.8;this.sy=(Math.random()-.5)*.8;this.o=Math.random()*.7+.3;} u(){this.x+=this.sx;this.y+=this.sy;if(this.x>canvas.width)this.x=0;if(this.x<0)this.x=canvas.width;if(this.y>canvas.height)this.y=0;if(this.y<0)this.y=canvas.height;} d(){ctx.fillStyle=`rgba(37,99,235,${this.o})`;ctx.beginPath();ctx.arc(this.x,this.y,this.s,0,Math.PI*2);ctx.fill();} }
+    for(let i=0;i<120;i++) ps.push(new P());
+    (function a(){ctx.clearRect(0,0,canvas.width,canvas.height);ps.forEach(p=>{p.u();p.d();});requestAnimationFrame(a);})();
+    window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+  }());
+  </script>
+  <script src="/scripts/admin-usuarios.js"></script>
+  <script>init();</script>
+</body>
+</html>

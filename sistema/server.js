@@ -26,7 +26,7 @@ app.use(express.json());
 
 // Proteção de páginas estáticas — redireciona para login se sem cookie de sessão
 app.use((req, res, next) => {
-  const urlsPublicas = ['/login.html', '/api/auth/login', '/api/auth/registrar', '/', '/index.html'];
+  const urlsPublicas = ['/login.html', '/bem-vindo.html', '/api/auth/login', '/api/auth/registrar', '/', '/index.html'];
 
   if (urlsPublicas.includes(req.path) || req.path.startsWith('/api')) {
     return next();
@@ -43,6 +43,16 @@ app.use((req, res, next) => {
   }
 
   next();
+});
+
+// Rota raiz — redireciona por token cookie
+app.get('/', (req, res) => {
+  const cookies = req.headers.cookie || '';
+  const match = cookies.match(/(?:^|;\s*)token=([^;]+)/);
+  if (match) {
+    return res.redirect('/bem-vindo.html');
+  }
+  return res.redirect('/login.html');
 });
 
 app.use(express.static(path.join(__dirname, 'publico')));
@@ -94,6 +104,8 @@ const rotasNotas           = require('./routes/notas');
 const rotasEstatisticas    = require('./routes/estatisticas');
 const rotasEntregas        = require('./routes/entregas');
 const rotasLocalizacoes    = require('./routes/localizacoes');
+const rotasUsuarios        = require('./routes/usuarios');
+const rotasMotoEntrega     = require('./routes/motorista_entrega');
 
 // ========================================
 // WEBSOCKET
@@ -118,6 +130,8 @@ app.use('/api/notas',          rotasNotas);
 app.use('/api/estatisticas',   rotasEstatisticas);
 app.use('/api/entregas',       rotasEntregas);
 app.use('/api/localizacoes',   rotasLocalizacoes);
+app.use('/api/usuarios',       rotasUsuarios);
+app.use('/api/motorista',      rotasMotoEntrega);
 
 // ========================================
 // ROTA NÃO ENCONTRADA

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Operador - Controle de Caminhões</title>
+  <link rel="stylesheet" href="/style_ultra_profissional.css">
+  <style>
+    .acoes-rapidas { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin:2rem 0; }
+    .acao-card { background:linear-gradient(135deg,#141a2f 0%,#1e2847 100%); border:1px solid rgba(37,99,235,0.2); border-radius:14px; padding:1.5rem; text-align:center; text-decoration:none; color:#e0e7ff; transition:border-color 0.2s,transform 0.2s; display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .acao-card:hover { border-color:rgba(37,99,235,0.6); transform:translateY(-2px); }
+    .acao-card .icon { font-size:32px; }
+    .acao-card .titulo { font-weight:700; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; }
+    .acao-card .desc { font-size:12px; color:#64748b; }
+  </style>
+</head>
+<body>
+
+  <canvas id="background-canvas"></canvas>
+  <nav></nav>
+
+  <main>
+    <h2>Dashboard Operador</h2>
+
+    <div class="cards">
+      <div class="card"><h3>Carregamentos Ativos</h3><p class="numero" id="totalAtivos">0</p></div>
+      <div class="card"><h3>Notas Pendentes</h3><p class="numero" id="totalPendentes">0</p></div>
+      <div class="card"><h3>Entregas Hoje</h3><p class="numero" id="totalEntregas">0</p></div>
+      <div class="card"><h3>Com Problema</h3><p class="numero" id="totalProblemas">0</p></div>
+    </div>
+
+    <h2 style="margin-top:2rem;">Acesso Rápido</h2>
+    <div class="acoes-rapidas">
+      <a href="/operador/carregamentos.html" class="acao-card">
+        <span class="icon">📦</span><span class="titulo">Carregamentos</span><span class="desc">Gerenciar carregamentos</span>
+      </a>
+      <a href="/compartilhado/estatisticas.html" class="acao-card">
+        <span class="icon">📈</span><span class="titulo">Estatísticas</span><span class="desc">Relatórios e gráficos</span>
+      </a>
+      <a href="/compartilhado/mapa.html" class="acao-card">
+        <span class="icon">🗺️</span><span class="titulo">Mapa GPS</span><span class="desc">Rastreamento em tempo real</span>
+      </a>
+      <a href="/compartilhado/historico.html" class="acao-card">
+        <span class="icon">📋</span><span class="titulo">Histórico</span><span class="desc">Log de operações</span>
+      </a>
+    </div>
+
+    <h2 style="margin-top:2rem;">Carregamentos Ativos</h2>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;">
+          <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">ID</th>
+          <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Caminhão</th>
+          <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Motorista</th>
+          <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Notas</th>
+          <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Entregues</th>
+          <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Status</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaCarregamentos">
+        <tr><td colspan="6" style="padding:2rem;text-align:center;color:#64748b;">Carregando...</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script src="/scripts/config-navbar.js"></script>
+  <script src="/scripts/navbar.js"></script>
+  <script>
+  renderizarNavbar();
+  const token = localStorage.getItem('token');
+  if (!token) window.location.href = '/login.html';
+
+  (function() {
+    const canvas = document.getElementById('background-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const particles = [];
+    class Particle { constructor(){this.x=Math.random()*canvas.width;this.y=Math.random()*canvas.height;this.size=Math.random()*3+1;this.speedX=(Math.random()-.5)*.8;this.speedY=(Math.random()-.5)*.8;this.opacity=Math.random()*.7+.3;} update(){this.x+=this.speedX;this.y+=this.speedY;if(this.x>canvas.width)this.x=0;if(this.x<0)this.x=canvas.width;if(this.y>canvas.height)this.y=0;if(this.y<0)this.y=canvas.height;} draw(){ctx.fillStyle=`rgba(37,99,235,${this.opacity})`;ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fill();} }
+    for(let i=0;i<120;i++) particles.push(new Particle());
+    (function a(){ctx.clearRect(0,0,canvas.width,canvas.height);particles.forEach(p=>{p.update();p.draw();});requestAnimationFrame(a);})();
+    window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+  }());
+
+  async function carregarDados() {
+    try {
+      const headers = { Authorization: 'Bearer ' + token };
+      const carregamentos = await fetch('/api/carregamentos', { headers }).then(r => r.json());
+      if (!Array.isArray(carregamentos)) return;
+
+      const ativos    = carregamentos.filter(c => c.status !== 'finalizado' && c.status !== 'aprovado');
+      const problemas = carregamentos.filter(c => c.total_notas > 0 && (c.notas_problema || 0) > 0);
+
+      document.getElementById('totalAtivos').textContent    = ativos.length;
+      document.getElementById('totalPendentes').textContent = carregamentos.reduce((s,c) => s + (c.total_notas - c.notas_entregues || 0), 0);
+      document.getElementById('totalEntregas').textContent  = carregamentos.reduce((s,c) => s + (c.notas_entregues || 0), 0);
+      document.getElementById('totalProblemas').textContent = problemas.length;
+
+      const tbody = document.getElementById('tabelaCarregamentos');
+      if (!ativos.length) { tbody.innerHTML='<tr><td colspan="6" style="padding:2rem;text-align:center;color:#64748b;">Nenhum carregamento ativo</td></tr>'; return; }
+
+      const statusColor = { em_rota:'color:#60a5fa;', finalizado:'color:#10b981;', aguardando:'color:#fbbf24;' };
+      tbody.innerHTML = ativos.slice(0,15).map(c => `
+        <tr style="border-top:1px solid rgba(37,99,235,0.1);">
+          <td style="padding:1rem;color:#e0e7ff;">${c.id}</td>
+          <td style="padding:1rem;color:#e0e7ff;">${c.placa||'-'}</td>
+          <td style="padding:1rem;color:#e0e7ff;">${c.motorista||'-'}</td>
+          <td style="padding:1rem;color:#e0e7ff;">${c.total_notas||0}</td>
+          <td style="padding:1rem;color:#10b981;">${c.notas_entregues||0}</td>
+          <td style="padding:1rem;"><span style="${statusColor[c.status]||'color:#94a3b8;'}font-weight:700;font-size:11px;text-transform:uppercase;">${(c.status||'').replace(/_/g,' ')}</span></td>
+        </tr>`).join('');
+    } catch(err) { console.error('Erro:', err); }
+  }
+
+  carregarDados();
+  setInterval(carregarDados, 30000);
+  </script>
+</body>
+</html>

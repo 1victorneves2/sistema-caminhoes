@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Entrega Ativa</title>
+  <style>
+    * { box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent; }
+    body { background:#0a0f1f;color:#e0e7ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh; }
+    nav { background:linear-gradient(135deg,#0a0f1f,#141a2f);border-bottom:1px solid rgba(37,99,235,0.2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100; }
+    nav h1 { font-size:15px;font-weight:800;color:#60a5fa;text-transform:uppercase;letter-spacing:2px; }
+    .nav-links { display:flex;align-items:center;gap:14px; }
+    .nav-link { font-size:13px;color:#94a3b8;text-decoration:none; }
+    .nav-sair { font-size:13px;color:#ef4444;text-decoration:none;font-weight:700; }
+    main { padding:16px;max-width:600px;margin:0 auto; }
+
+    /* Status banner */
+    .status-banner { border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px; }
+    .status-banner.aguardando  { background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.3); }
+    .status-banner.chegou      { background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3); }
+    .status-banner.em_entrega  { background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25); }
+    .status-banner.voltando    { background:rgba(100,116,139,0.12);border:1px solid rgba(100,116,139,0.3); }
+    .status-icon { font-size:28px;flex-shrink:0; }
+    .status-text h2 { font-size:16px;font-weight:800; }
+    .status-text p  { font-size:12px;color:#94a3b8;margin-top:2px; }
+
+    /* Info card */
+    .info-card { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.15);border-radius:14px;padding:16px;margin-bottom:16px; }
+    .info-card h3 { font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px; }
+    .info-row { display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(37,99,235,0.07); }
+    .info-row:last-child { border-bottom:none; }
+    .info-lbl { font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px; }
+    .info-val { font-size:14px;color:#e0e7ff;font-weight:600; }
+
+    /* Stats mini */
+    .stats-row { display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px; }
+    .stat-mini { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.12);border-radius:12px;padding:12px 6px;text-align:center; }
+    .stat-mini .num { font-size:24px;font-weight:800;display:block; }
+    .stat-mini .lbl { font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px; }
+
+    /* Action buttons */
+    .btn-acao { display:block;width:100%;padding:16px;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;transition:opacity 0.2s; }
+    .btn-acao:disabled { opacity:0.4;cursor:not-allowed; }
+    .btn-chegou   { background:linear-gradient(135deg,#d97706,#f59e0b);color:#0a0f1f; }
+    .btn-voltando { background:linear-gradient(135deg,#475569,#64748b);color:#e0e7ff; }
+
+    /* Notas */
+    .notas-header { display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px; }
+    .notas-header h2 { font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#e0e7ff; }
+    .nota-card { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.15);border-radius:14px;padding:14px;margin-bottom:10px;transition:border-color 0.2s; }
+    .nota-card.entregue        { border-color:rgba(16,185,129,0.4); }
+    .nota-card.problema        { border-color:rgba(239,68,68,0.4); }
+    .nota-card.nao_encontrado  { border-color:rgba(245,158,11,0.4); }
+    .nota-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px; }
+    .nota-numero { font-size:15px;font-weight:800;color:#60a5fa; }
+    .nota-badge { font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase; }
+    .badge-pendente       { background:rgba(100,116,139,0.2);color:#94a3b8; }
+    .badge-entregue       { background:rgba(16,185,129,0.2);color:#10b981; }
+    .badge-problema       { background:rgba(239,68,68,0.2);color:#ef4444; }
+    .badge-nao_encontrado { background:rgba(245,158,11,0.2);color:#f59e0b; }
+    .badge-devolucao_parcial { background:rgba(139,92,246,0.2);color:#a78bfa; }
+    .badge-sac            { background:rgba(239,68,68,0.15);color:#fca5a5; }
+    .nota-desc { font-size:13px;color:#94a3b8;margin-bottom:10px; }
+    .nota-obs  { font-size:12px;color:#64748b;font-style:italic;margin-bottom:10px; }
+    .nota-btns { display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px; }
+    .nota-btn { padding:8px 4px;border:none;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;transition:opacity 0.15s; }
+    .nota-btn:disabled { opacity:0.3;cursor:not-allowed; }
+    .btn-entregue { background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.3); }
+    .btn-problema { background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid rgba(239,68,68,0.3); }
+    .btn-nao-enc  { background:rgba(245,158,11,0.2);color:#f59e0b;border:1px solid rgba(245,158,11,0.3); }
+    .motivo-wrap { margin-top:8px;display:none; }
+    .motivo-input { width:100%;background:rgba(10,15,31,0.7);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:9px 12px;border-radius:8px;font-size:13px; }
+    .motivo-enviar { margin-top:6px;width:100%;padding:9px;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase; }
+
+    /* Empty state */
+    .empty { text-align:center;padding:3rem 1rem;color:#475569; }
+    .empty-icon { font-size:48px;display:block;margin-bottom:12px; }
+
+    /* Toast */
+    .toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e2847;border:1px solid rgba(37,99,235,0.3);color:#e0e7ff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:9999;display:none;white-space:nowrap; }
+    .toast.show { display:block;animation:fadein 0.3s; }
+    @keyframes fadein { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+  </style>
+</head>
+<body>
+  <nav>
+    <h1>Entrega Ativa</h1>
+    <div class="nav-links">
+      <a href="/motorista/motorista-entregas.html" class="nav-link">Histórico</a>
+      <a href="/motorista/motorista-perfil.html" class="nav-link">Perfil</a>
+      <a href="#" class="nav-sair" onclick="fazerLogout();return false;">Sair</a>
+    </div>
+  </nav>
+
+  <main id="mainContent">
+    <div class="empty"><span class="empty-icon">⏳</span>Carregando...</div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  const token   = localStorage.getItem('token');
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+  if (!token) window.location.href = '/login.html';
+
+  function fazerLogout() {
+    localStorage.removeItem('token'); localStorage.removeItem('usuario'); localStorage.removeItem('empresa_id');
+    document.cookie = 'token=; path=/; max-age=0';
+    window.location.href = '/login.html';
+  }
+
+  const api = (url, opts = {}) => fetch(url, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) }
+  });
+
+  let _carregamentoId = null;
+  let _notas = [];
+
+  function toast(msg, ms = 2500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  function statusBannerClass(sm) {
+    if (!sm || sm === 'aguardando') return 'aguardando';
+    if (sm === 'chegou_local')      return 'chegou';
+    if (sm === 'em_entrega' || sm === 'todas_atualizadas') return 'em_entrega';
+    if (sm === 'voltando')          return 'voltando';
+    return 'aguardando';
+  }
+
+  function statusBannerIcon(sm) {
+    if (!sm || sm === 'aguardando') return '🚚';
+    if (sm === 'chegou_local')      return '📍';
+    if (sm === 'em_entrega')        return '📦';
+    if (sm === 'todas_atualizadas') return '✅';
+    if (sm === 'voltando')          return '🔄';
+    return '🚚';
+  }
+
+  function statusBannerTexto(sm) {
+    if (!sm || sm === 'aguardando') return { h: 'Em Rota', p: 'Dirija até o local de entrega' };
+    if (sm === 'chegou_local')      return { h: 'No Local', p: 'Atualize o status das notas' };
+    if (sm === 'em_entrega')        return { h: 'Entregando', p: 'Continue atualizando as notas' };
+    if (sm === 'todas_atualizadas') return { h: 'Notas Atualizadas', p: 'Registre o retorno quando voltar' };
+    if (sm === 'voltando')          return { h: 'Voltando', p: 'Retorno registrado' };
+    return { h: 'Em Rota', p: '' };
+  }
+
+  function badgeClass(status) {
+    const map = { pendente:'badge-pendente', entregue:'badge-entregue', problema:'badge-problema', nao_encontrado:'badge-nao_encontrado', devolucao_parcial:'badge-devolucao_parcial', sac:'badge-sac' };
+    return map[status] || 'badge-pendente';
+  }
+
+  function badgeLabel(status) {
+    const map = { pendente:'Pendente', entregue:'Entregue', problema:'Problema', nao_encontrado:'Não Encontrado', devolucao_parcial:'Dev. Parcial', sac:'SAC' };
+    return map[status] || status;
+  }
+
+  function renderizarNota(n) {
+    const isPendente = n.status === 'pendente';
+    return `
+      <div class="nota-card ${n.status}" id="nota-${n.id}">
+        <div class="nota-header">
+          <span class="nota-numero">Nota ${n.numero_nota}</span>
+          <span class="nota-badge ${badgeClass(n.status)}">${badgeLabel(n.status)}</span>
+        </div>
+        ${n.descricao ? `<div class="nota-desc">${n.descricao}${n.quantidade ? ` — Qtd: ${n.quantidade}` : ''}</div>` : ''}
+        ${n.observacoes ? `<div class="nota-obs">"${n.observacoes}"</div>` : ''}
+        <div class="nota-btns">
+          <button class="nota-btn btn-entregue" onclick="atualizarNota(${n.id},'entregue')" ${!isPendente?'disabled':''}>✓ Entregue</button>
+          <button class="nota-btn btn-problema" onclick="toggleMotivo(${n.id},'problema')" ${!isPendente?'disabled':''}>⚠ Problema</button>
+          <button class="nota-btn btn-nao-enc"  onclick="toggleMotivo(${n.id},'nao_encontrado')" ${!isPendente?'disabled':''}>✕ N. Enc.</button>
+        </div>
+        <div class="motivo-wrap" id="motivo-${n.id}">
+          <input class="motivo-input" id="motivo-input-${n.id}" type="text" placeholder="Motivo (opcional)">
+          <button class="motivo-enviar" id="motivo-btn-${n.id}">Confirmar</button>
+        </div>
+      </div>`;
+  }
+
+  function toggleMotivo(notaId, status) {
+    const wrap = document.getElementById('motivo-' + notaId);
+    const btn  = document.getElementById('motivo-btn-' + notaId);
+    if (wrap.style.display === 'block') {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'block';
+    btn.onclick = () => atualizarNota(notaId, status, document.getElementById('motivo-input-' + notaId).value);
+  }
+
+  async function atualizarNota(notaId, status, motivo = '') {
+    try {
+      const r = await api(`/api/motorista/minha-entrega/${_carregamentoId}/notas/${notaId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, motivo })
+      });
+      const data = await r.json();
+      if (!r.ok) { toast('Erro: ' + (data.erro || r.status)); return; }
+      toast(status === 'entregue' ? '✓ Nota entregue!' : '⚠ Status atualizado');
+      await carregarEntrega();
+    } catch { toast('Erro de conexão'); }
+  }
+
+  async function marcarChegada() {
+    const btn = document.getElementById('btnChegou');
+    if (btn) btn.disabled = true;
+    try {
+      const r = await api(`/api/motorista/minha-entrega/${_carregamentoId}/chegou`, { method: 'PUT' });
+      const data = await r.json();
+      if (!r.ok) { toast('Erro: ' + (data.erro || r.status)); return; }
+      toast('📍 Chegada registrada!');
+      await carregarEntrega();
+    } catch { toast('Erro de conexão'); }
+  }
+
+  async function marcarVoltando() {
+    const btn = document.getElementById('btnVoltando');
+    if (btn) btn.disabled = true;
+    try {
+      const r = await api(`/api/motorista/minha-entrega/${_carregamentoId}/voltando`, { method: 'PUT' });
+      const data = await r.json();
+      if (!r.ok) { toast('Erro: ' + (data.erro || r.status)); return; }
+      toast('🔄 Retorno registrado!');
+      await carregarEntrega();
+    } catch { toast('Erro de conexão'); }
+  }
+
+  async function carregarEntrega() {
+    try {
+      const r = await api('/api/motorista/minha-entrega');
+      const data = await r.json();
+
+      if (!r.ok || !data.sucesso) {
+        document.getElementById('mainContent').innerHTML =
+          '<div class="empty"><span class="empty-icon">🚚</span>Nenhuma entrega ativa no momento.</div>';
+        return;
+      }
+
+      const c = data.dados;
+      if (!c) {
+        document.getElementById('mainContent').innerHTML =
+          '<div class="empty"><span class="empty-icon">🚚</span>Nenhuma entrega ativa no momento.</div>';
+        return;
+      }
+
+      _carregamentoId = c.id;
+
+      const sm = c.status_motorista;
+      const bc = statusBannerClass(sm);
+      const bi = statusBannerIcon(sm);
+      const bt = statusBannerTexto(sm);
+
+      const mostrarChegou   = !sm || sm === 'aguardando';
+      const mostrarVoltando = sm === 'todas_atualizadas' || sm === 'em_entrega';
+
+      let html = `
+        <div class="status-banner ${bc}">
+          <span class="status-icon">${bi}</span>
+          <div class="status-text"><h2>${bt.h}</h2><p>${bt.p}</p></div>
+        </div>
+        <div class="info-card">
+          <h3>Carregamento #${c.id}</h3>
+          <div class="info-row"><span class="info-lbl">Caminhão</span><span class="info-val">${c.placa || '—'}</span></div>
+          <div class="info-row"><span class="info-lbl">Motorista</span><span class="info-val">${c.motorista_nome || '—'}</span></div>
+          ${c.conferente_nome ? `<div class="info-row"><span class="info-lbl">Conferente</span><span class="info-val">${c.conferente_nome}</span></div>` : ''}
+        </div>
+        <div class="stats-row">
+          <div class="stat-mini"><span class="num" style="color:#60a5fa;">${c.total_notas||0}</span><span class="lbl">Total</span></div>
+          <div class="stat-mini"><span class="num" style="color:#10b981;">${c.notas_entregues||0}</span><span class="lbl">Entregues</span></div>
+          <div class="stat-mini"><span class="num" style="color:#ef4444;">${c.notas_problema||0}</span><span class="lbl">Problema</span></div>
+          <div class="stat-mini"><span class="num" style="color:#94a3b8;">${c.notas_pendente||0}</span><span class="lbl">Pendente</span></div>
+        </div>`;
+
+      if (mostrarChegou) {
+        html += `<button class="btn-acao btn-chegou" id="btnChegou" onclick="marcarChegada()">📍 Registrar Chegada no Local</button>`;
+      }
+      if (mostrarVoltando) {
+        html += `<button class="btn-acao btn-voltando" id="btnVoltando" onclick="marcarVoltando()">🔄 Registrar Retorno</button>`;
+      }
+
+      // Notas
+      const rn = await api(`/api/motorista/minha-entrega/${c.id}/notas`);
+      const dn = await rn.json();
+      _notas = (dn.sucesso && dn.dados) ? dn.dados : [];
+
+      html += `<div class="notas-header"><h2>Notas (${_notas.length})</h2></div>`;
+      if (!_notas.length) {
+        html += `<div class="empty"><span class="empty-icon">📋</span>Nenhuma nota neste carregamento.</div>`;
+      } else {
+        _notas.forEach(n => { html += renderizarNota(n); });
+      }
+
+      document.getElementById('mainContent').innerHTML = html;
+    } catch (err) {
+      console.error(err);
+      document.getElementById('mainContent').innerHTML =
+        '<div class="empty"><span class="empty-icon">⚠️</span>Erro ao carregar entrega.</div>';
+    }
+  }
+
+  carregarEntrega();
+  </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Meu Perfil - Motorista</title>
+  <style>
+    * { box-sizing:border-box;margin:0;padding:0; }
+    body { background:#0a0f1f;color:#e0e7ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh; }
+    nav { background:linear-gradient(135deg,#0a0f1f,#141a2f);border-bottom:1px solid rgba(37,99,235,0.2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100; }
+    nav h1 { font-size:15px;font-weight:800;color:#60a5fa;text-transform:uppercase;letter-spacing:2px; }
+    .nav-links { display:flex;align-items:center;gap:12px; }
+    .nav-link { font-size:13px;color:#94a3b8;text-decoration:none; }
+    .nav-link.ativo { color:#60a5fa;font-weight:700; }
+    .nav-sair { font-size:13px;color:#ef4444;text-decoration:none;font-weight:700; }
+    main { padding:20px;max-width:500px;margin:0 auto; }
+    .perfil-card { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.2);border-radius:18px;padding:2rem;margin-bottom:1.5rem;text-align:center; }
+    .avatar { width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#60a5fa);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 1rem; }
+    .perfil-nome { font-size:22px;font-weight:800;color:#e0e7ff;margin-bottom:4px; }
+    .perfil-role { font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:1px;font-weight:700; }
+    .info-section { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.15);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem; }
+    .info-section h3 { font-size:13px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-bottom:1.2rem; }
+    .info-item { display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(37,99,235,0.08); }
+    .info-item:last-child { border-bottom:none; }
+    .info-label { font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;font-weight:700; }
+    .info-value { font-size:14px;color:#e0e7ff;font-weight:600; }
+    .stats-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem; }
+    .stat-box { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.15);border-radius:14px;padding:1.2rem;text-align:center; }
+    .stat-num { font-size:32px;font-weight:800;display:block;margin-bottom:4px; }
+    .stat-lbl { font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px; }
+    .btn-voltar { display:block;width:100%;padding:14px;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;text-align:center;text-decoration:none; }
+  </style>
+</head>
+<body>
+  <nav>
+    <h1>Perfil</h1>
+    <div class="nav-links">
+      <a href="/motorista/motorista-entregas.html" class="nav-link">Entregas</a>
+      <a href="#" class="nav-sair" onclick="fazerLogout(); return false;">Sair</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="perfil-card">
+      <div class="avatar">🚚</div>
+      <div class="perfil-nome" id="perfilNome">Motorista</div>
+      <div class="perfil-role">Motorista</div>
+    </div>
+
+    <div class="info-section">
+      <h3>Informações</h3>
+      <div class="info-item"><span class="info-label">Email</span><span class="info-value" id="perfilEmail">—</span></div>
+      <div class="info-item"><span class="info-label">Empresa</span><span class="info-value" id="perfilEmpresa">—</span></div>
+      <div class="info-item"><span class="info-label">Perfil</span><span class="info-value">Motorista</span></div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <span class="stat-num" id="statEntregues" style="color:#10b981;">—</span>
+        <span class="stat-lbl">Entregues</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-num" id="statProblemas" style="color:#ef4444;">—</span>
+        <span class="stat-lbl">Problemas</span>
+      </div>
+    </div>
+
+    <div class="info-section" style="margin-bottom:1.5rem;">
+      <h3>Alterar Senha</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <input type="password" id="senhaAtual"  placeholder="Senha atual"   style="background:rgba(10,15,31,0.7);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:11px 14px;border-radius:10px;font-size:14px;">
+        <input type="password" id="senhaNova"   placeholder="Nova senha (mín. 6 caracteres)" style="background:rgba(10,15,31,0.7);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:11px 14px;border-radius:10px;font-size:14px;">
+        <input type="password" id="senhaConfirm" placeholder="Confirmar nova senha" style="background:rgba(10,15,31,0.7);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:11px 14px;border-radius:10px;font-size:14px;">
+        <button id="btnAlterarSenha" onclick="alterarSenha()" style="padding:12px;background:linear-gradient(135deg,#059669,#10b981);color:#0a0f1f;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Alterar Senha</button>
+        <div id="msgSenha" style="font-size:13px;text-align:center;display:none;padding:8px;border-radius:8px;"></div>
+      </div>
+    </div>
+
+    <a href="/motorista/motorista-entregas.html" class="btn-voltar">Ver Minhas Entregas</a>
+  </main>
+
+  <script>
+  const token   = localStorage.getItem('token');
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+
+  if (!token) window.location.href = '/login.html';
+
+  function fazerLogout() {
+    localStorage.removeItem('token'); localStorage.removeItem('usuario'); localStorage.removeItem('empresa_id');
+    document.cookie = 'token=; path=/; max-age=0';
+    window.location.href = '/login.html';
+  }
+
+  if (usuario.nome)  document.getElementById('perfilNome').textContent  = usuario.nome;
+  if (usuario.email) document.getElementById('perfilEmail').textContent = usuario.email;
+
+  async function carregarEstatisticas() {
+    try {
+      const r = await fetch('/api/entregas/ativas', { headers: { Authorization: 'Bearer ' + token } });
+      const dados = await r.json();
+      const lista = Array.isArray(dados) ? dados : (dados.carregamentos || []);
+      if (lista.length) {
+        const c = lista[0];
+        document.getElementById('statEntregues').textContent = c.notas_entregues || 0;
+        document.getElementById('statProblemas').textContent = c.notas_problema || 0;
+      } else {
+        document.getElementById('statEntregues').textContent = 0;
+        document.getElementById('statProblemas').textContent = 0;
+      }
+    } catch { /* silencioso */ }
+  }
+
+  carregarEstatisticas();
+
+  async function alterarSenha() {
+    const senhaAtual   = document.getElementById('senhaAtual').value;
+    const senhaNova    = document.getElementById('senhaNova').value;
+    const senhaConfirm = document.getElementById('senhaConfirm').value;
+    const msg          = document.getElementById('msgSenha');
+    const btn          = document.getElementById('btnAlterarSenha');
+
+    function mostrarMsg(texto, ok) {
+      msg.textContent = texto;
+      msg.style.display = 'block';
+      msg.style.background = ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+      msg.style.color = ok ? '#10b981' : '#ef4444';
+    }
+
+    if (!senhaAtual || !senhaNova || !senhaConfirm) { mostrarMsg('Preencha todos os campos', false); return; }
+    if (senhaNova.length < 6)                        { mostrarMsg('Nova senha deve ter no mínimo 6 caracteres', false); return; }
+    if (senhaNova !== senhaConfirm)                  { mostrarMsg('As senhas não coincidem', false); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Alterando...';
+    try {
+      const r = await fetch(`/api/usuarios/${usuario.id}/alterar-senha`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ senha_atual: senhaAtual, senha_nova: senhaNova })
+      });
+      const data = await r.json();
+      if (!r.ok) { mostrarMsg(data.erro || 'Erro ao alterar senha', false); return; }
+      mostrarMsg('✓ Senha alterada com sucesso!', true);
+      document.getElementById('senhaAtual').value = '';
+      document.getElementById('senhaNova').value = '';
+      document.getElementById('senhaConfirm').value = '';
+    } catch {
+      mostrarMsg('Erro de conexão', false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Alterar Senha';
+    }
+  }
+  </script>
+</body>
+</html>

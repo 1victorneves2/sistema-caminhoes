@@ -25,6 +25,20 @@ const login = async (req, res) => {
 
     const token = gerarToken(usuario);
 
+    // Buscar permissões da role para cache no frontend
+    let permissoes = [];
+    try {
+      const permResult = await global.db.query(
+        `SELECT p.modulo, p.acao
+         FROM permissoes p
+         JOIN role_permissoes rp ON p.id = rp.permissao_id
+         JOIN roles r            ON rp.role_id = r.id
+         WHERE r.nome = $1 AND r.empresa_id = $2`,
+        [usuario.role, usuario.empresa_id || 1]
+      );
+      permissoes = permResult.rows;
+    } catch (_) { /* permissões opcionais, não bloqueia login */ }
+
     res.json({
       sucesso: true,
       token,
@@ -32,8 +46,10 @@ const login = async (req, res) => {
         id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
-        role: usuario.role
-      }
+        role: usuario.role,
+        empresa_id: usuario.empresa_id
+      },
+      permissoes
     });
   } catch (erro) {
     console.error('Erro ao fazer login:', erro);
