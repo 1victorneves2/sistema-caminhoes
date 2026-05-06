@@ -167,7 +167,7 @@ function atualizarDashboard() {
       return r.json();
     }).catch(() => null);
   }
-  Promise.all([fetchSafe('/api/caminhoes'), fetchSafe('/api/viagens')]).then(function(results) {
+  Promise.all([fetchSafe('/api/caminhoes'), fetchSafe('/api/carregamentos')]).then(function(results) {
     const caminhoes = results[0]; const viagens = results[1];
     if (!Array.isArray(caminhoes) || !Array.isArray(viagens)) return;
     animarNumero('disponveis', caminhoes.filter(c => c.status==='disponivel').length);
