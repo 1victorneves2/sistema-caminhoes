@@ -19,8 +19,6 @@
     .btn-cancelar { background:rgba(100,116,139,0.2);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);padding:11px 22px;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase; }
     .btn-primario { padding:13px 26px;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;background:linear-gradient(135deg,#2563eb 0%,#3b82f6 100%);color:#0a0f1f;box-shadow:0 6px 20px rgba(37,99,235,0.35); }
     .aviso-login { font-size:12px;color:#60a5fa;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:8px;padding:10px 14px;margin-bottom:1rem;display:none; }
-
-    /* Modal credenciais */
     .cred-box { background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:12px;padding:1.5rem;margin:1.2rem 0; }
     .cred-label { font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px; }
     .cred-valor { font-size:16px;font-weight:800;font-family:monospace;color:#60a5fa;word-break:break-all;margin-bottom:14px; }
@@ -28,8 +26,6 @@
     .btn-copiar { width:100%;padding:12px;background:linear-gradient(135deg,#059669,#10b981);color:#0a0f1f;border:none;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;margin-top:1rem; }
     .btn-ok { width:100%;padding:12px;background:rgba(100,116,139,0.2);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;margin-top:8px; }
     .cred-aviso { font-size:11px;color:#475569;margin-top:1rem;line-height:1.6;text-align:center; }
-
-    /* Tabela */
     .badge-func { padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase; }
     .badge-motorista  { background:rgba(16,185,129,0.15);color:#10b981; }
     .badge-conferente { background:rgba(37,99,235,0.15);color:#60a5fa; }
@@ -51,7 +47,7 @@
     </div>
 
     <div style="display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap;">
-      <select id="filtroFuncao" onchange="carregarFuncionarios()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:10px 14px;border-radius:10px;font-size:14px;">
+      <select id="filtroFuncao" onchange="listarFuncionarios()" style="background:rgba(10,15,31,0.6);border:1.5px solid rgba(37,99,235,0.2);color:#e0e7ff;padding:10px 14px;border-radius:10px;font-size:14px;">
         <option value="">Todos os tipos</option>
         <option value="Motorista">Motoristas</option>
         <option value="Conferente">Conferentes</option>
@@ -112,7 +108,7 @@
       </div>
 
       <div class="modal-buttons">
-        <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-cancelar" onclick="fecharModalForm()">Cancelar</button>
         <button class="btn-salvar" onclick="salvarFuncionario()">Salvar</button>
       </div>
     </div>
@@ -142,19 +138,61 @@
     </div>
   </div>
 
-  <script src="/script_ultra_profissional.js"></script>
+  <script src="/scripts/config-navbar.js"></script>
+  <script src="/scripts/navbar.js"></script>
   <script>
-  const token = localStorage.getItem('token');
-  if (!token) window.location.href = '/login.html';
+  renderizarNavbar();
 
-  function api(url, opts = {}) {
-    return fetch(url, {
-      ...opts,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token,
-        ...(opts.headers || {})
+  const _token   = localStorage.getItem('token');
+  const _usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+  if (!_token) window.location.href = '/login.html';
+
+  // Intercepta 401 global para fazer logout automático
+  (function() {
+    const _fetch = window.fetch;
+    window.fetch = function(...args) {
+      return _fetch.apply(this, args).then(response => {
+        if (response.status === 401) { window.logout(); }
+        return response;
+      });
+    };
+  }());
+
+  // Partículas animadas (padrão do projeto)
+  (function() {
+    const canvas = document.getElementById('background-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const particles = [];
+    class Particle { constructor(){this.x=Math.random()*canvas.width;this.y=Math.random()*canvas.height;this.size=Math.random()*3+1;this.speedX=(Math.random()-.5)*.8;this.speedY=(Math.random()-.5)*.8;this.opacity=Math.random()*.7+.3;} update(){this.x+=this.speedX;this.y+=this.speedY;if(this.x>canvas.width)this.x=0;if(this.x<0)this.x=canvas.width;if(this.y>canvas.height)this.y=0;if(this.y<0)this.y=canvas.height;} draw(){ctx.fillStyle=`rgba(37,99,235,${this.opacity})`;ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fill();} }
+    for(let i=0;i<120;i++) particles.push(new Particle());
+    (function a(){ctx.clearRect(0,0,canvas.width,canvas.height);particles.forEach(p=>{p.update();p.draw();});requestAnimationFrame(a);})();
+    window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+  }());
+
+  // fetchComToken: mesmo padrão do /scripts/carregamentos.js
+  function fetchComToken(url, options = {}) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login.html';
+      return Promise.resolve(null);
+    }
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token,
+      ...options.headers
+    };
+    return fetch(url, { ...options, headers }).then(response => {
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        localStorage.removeItem('empresa_id');
+        document.cookie = 'token=; path=/; max-age=0';
+        alert('Sessão expirada. Faça login novamente.');
+        window.location.href = '/login.html';
+        return null;
       }
+      return response;
     });
   }
 
@@ -166,11 +204,13 @@
     setTimeout(() => n.remove(), 3500);
   }
 
+  // ============================================================
+  // MODAIS
+  // ============================================================
   function onFuncaoChange() {
     const f = document.getElementById('funcao-func').value;
     const aviso = document.getElementById('avisoLogin');
-    const editando = document.getElementById('idEdicao').value;
-    if (!editando) {
+    if (!document.getElementById('idEdicao').value) {
       aviso.style.display = (f === 'Motorista' || f === 'Conferente') ? 'block' : 'none';
     }
   }
@@ -197,7 +237,7 @@
     document.getElementById('modalForm').classList.add('ativo');
   }
 
-  function fecharModal() {
+  function fecharModalForm() {
     document.getElementById('modalForm').classList.remove('ativo');
   }
 
@@ -213,6 +253,9 @@
       .catch(() => alert('Email: ' + email + '\nSenha: ' + senha));
   }
 
+  // ============================================================
+  // CRUD
+  // ============================================================
   async function salvarFuncionario() {
     const id     = document.getElementById('idEdicao').value;
     const nome   = document.getElementById('nome-func').value.trim();
@@ -230,7 +273,8 @@
     const body   = id ? { nome, cpf, funcao } : { nome, cpf, funcao, observacoes: obs };
 
     try {
-      const r = await api(url, { method, body: JSON.stringify(body) });
+      const r = await fetchComToken(url, { method, body: JSON.stringify(body) });
+      if (!r) return;
       const d = await r.json();
 
       if (!r.ok) {
@@ -238,13 +282,15 @@
         return;
       }
 
-      fecharModal();
-      carregarFuncionarios();
+      fecharModalForm();
+      listarFuncionarios();
 
       if (!id && d.credenciais) {
         document.getElementById('cred-email').textContent = d.credenciais.email;
         document.getElementById('cred-senha').textContent = d.credenciais.senha;
         document.getElementById('modalCredenciais').classList.add('ativo');
+      } else if (!id) {
+        mostrarNotif('Funcionário criado com sucesso!');
       } else {
         mostrarNotif('Funcionário atualizado com sucesso!');
       }
@@ -256,32 +302,46 @@
   async function deletarFuncionario(id, nome) {
     if (!confirm('Deletar funcionário "' + nome + '"?')) return;
     try {
-      const r = await api('/api/funcionarios/' + id, { method: 'DELETE' });
+      const r = await fetchComToken('/api/funcionarios/' + id, { method: 'DELETE' });
+      if (!r) return;
       const d = await r.json();
       if (!r.ok) { mostrarNotif(d.erro || 'Erro ao deletar', true); return; }
       mostrarNotif('Funcionário deletado');
-      carregarFuncionarios();
+      listarFuncionarios();
     } catch {
       mostrarNotif('Erro de conexão', true);
     }
   }
 
   function badgeFunc(funcao) {
-    const cls = funcao === 'Motorista' ? 'badge-motorista' : funcao === 'Conferente' ? 'badge-conferente' : 'badge-outro';
+    const cls = funcao === 'Motorista' ? 'badge-motorista'
+              : funcao === 'Conferente' ? 'badge-conferente'
+              : 'badge-outro';
     return `<span class="badge-func ${cls}">${funcao}</span>`;
   }
 
-  async function carregarFuncionarios() {
+  async function listarFuncionarios() {
     const filtro = document.getElementById('filtroFuncao').value;
     const url = '/api/funcionarios' + (filtro ? '?funcao=' + encodeURIComponent(filtro) : '');
     try {
-      const r = await api(url);
+      const r = await fetchComToken(url);
+      if (!r) return;
+
+      if (!r.ok) {
+        console.error('Erro ao listar funcionários:', r.status);
+        document.getElementById('tabelaFuncionarios').innerHTML =
+          '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#ef4444;">Erro ao carregar (' + r.status + ')</td></tr>';
+        return;
+      }
+
       const lista = await r.json();
       const tbody = document.getElementById('tabelaFuncionarios');
+
       if (!Array.isArray(lista) || !lista.length) {
         tbody.innerHTML = '<tr><td colspan="6" style="padding:2rem;text-align:center;color:rgba(224,231,255,0.4);">Nenhum funcionário encontrado</td></tr>';
         return;
       }
+
       tbody.innerHTML = lista.map(f => `
         <tr style="border-top:1px solid rgba(37,99,235,0.1);">
           <td style="padding:1rem;color:#64748b;font-size:13px;">${f.id}</td>
@@ -296,21 +356,22 @@
               style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Deletar</button>
           </td>
         </tr>`).join('');
-    } catch {
+    } catch (err) {
+      console.error('Erro ao listar funcionários:', err);
       document.getElementById('tabelaFuncionarios').innerHTML =
-        '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#ef4444;">Erro ao carregar funcionários</td></tr>';
+        '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#ef4444;">Erro de conexão</td></tr>';
     }
   }
 
   document.getElementById('cpf-func').addEventListener('input', function() {
     let v = this.value.replace(/\D/g, '').slice(0, 11);
-    if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+    if (v.length > 9)      v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
     else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3');
     else if (v.length > 3) v = v.replace(/(\d{3})(\d{0,3})/, '$1.$2');
     this.value = v;
   });
 
-  carregarFuncionarios();
+  listarFuncionarios();
   </script>
 </body>
 </html>
