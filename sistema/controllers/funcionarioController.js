@@ -103,14 +103,17 @@ class FuncionarioController {
 
       await salvarHistorico(req.user.id, 'criar', 'funcionarios', funcionario.id, null, funcionario);
 
+      const credenciais = {
+        email,
+        senha,
+        mensagem: 'Compartilhe essas credenciais com o funcionário. Ele poderá alterar a senha após o primeiro login.'
+      };
+
       return res.status(201).json({
         sucesso: true,
         funcionario,
-        credenciais_temporarias: {
-          email,
-          senha,
-          mensagem: 'Compartilhe essas credenciais com o funcionário. Ele poderá alterar a senha após o primeiro login.'
-        }
+        credenciais,
+        credenciais_temporarias: credenciais
       });
     } catch (err) {
       await client.query('ROLLBACK');
