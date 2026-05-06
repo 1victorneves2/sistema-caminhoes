@@ -353,6 +353,8 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
   const erroDiv = document.getElementById('erro');
 
   try {
+    console.log('Tentando login com:', email);
+
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -360,17 +362,25 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
     });
 
     const data = await response.json();
+    console.log('Response do login:', data);
 
     if (!response.ok) {
       erroDiv.textContent = data.erro || 'Erro ao fazer login';
       erroDiv.classList.add('ativo');
+      console.error('Erro no login:', data);
       return;
     }
 
+    console.log('Login bem-sucedido, salvando token...');
+
     localStorage.setItem('token', data.token);
     localStorage.setItem('usuario', JSON.stringify(data.usuario));
+    localStorage.setItem('role', data.usuario.role);
     localStorage.setItem('empresa_id', data.usuario.empresa_id);
     localStorage.setItem('permissoes', JSON.stringify(data.permissoes || []));
+
+    console.log('Token salvo:', localStorage.getItem('token').substring(0, 20) + '...');
+    console.log('Todos os dados salvos no localStorage');
 
     // Cookie para proteção server-side de páginas estáticas (1h)
     document.cookie = `token=${encodeURIComponent(data.token)}; path=/; max-age=3600; SameSite=Strict`;
@@ -379,6 +389,7 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
   } catch (err) {
     erroDiv.textContent = 'Erro ao conectar ao servidor';
     erroDiv.classList.add('ativo');
+    console.error('Erro ao conectar:', err);
   }
 });
   </script>
