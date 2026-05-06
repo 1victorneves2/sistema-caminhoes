@@ -140,6 +140,7 @@
 
   <script src="/scripts/config-navbar.js"></script>
   <script src="/scripts/navbar.js"></script>
+  <script src="/scripts/auth.js"></script>
   <script>
   renderizarNavbar();
 
@@ -169,32 +170,6 @@
     (function a(){ctx.clearRect(0,0,canvas.width,canvas.height);particles.forEach(p=>{p.update();p.draw();});requestAnimationFrame(a);})();
     window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
   }());
-
-  // fetchComToken: mesmo padrão do /scripts/carregamentos.js
-  function fetchComToken(url, options = {}) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      window.location.href = '/login.html';
-      return Promise.resolve(null);
-    }
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token,
-      ...options.headers
-    };
-    return fetch(url, { ...options, headers }).then(response => {
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('usuario');
-        localStorage.removeItem('empresa_id');
-        document.cookie = 'token=; path=/; max-age=0';
-        alert('Sessão expirada. Faça login novamente.');
-        window.location.href = '/login.html';
-        return null;
-      }
-      return response;
-    });
-  }
 
   function mostrarNotif(msg, erro) {
     const n = document.createElement('div');

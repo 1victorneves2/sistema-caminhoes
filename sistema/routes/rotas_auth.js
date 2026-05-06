@@ -36,6 +36,17 @@ router.post('/login', async (req, res) => {
 
     const token = gerarToken(usuario);
 
+    // Buscar permissões do role do usuário para o frontend
+    const permResult = await global.db.query(
+      `SELECT p.modulo, p.acao
+       FROM permissoes p
+       JOIN role_permissoes rp ON p.id = rp.permissao_id
+       JOIN roles r ON rp.role_id = r.id
+       WHERE r.nome = $1 AND r.empresa_id = $2`,
+      [usuario.role, usuario.empresa_id]
+    );
+    const permissoes = permResult.rows;
+
     res.json({
       sucesso: true,
       token,
@@ -45,7 +56,8 @@ router.post('/login', async (req, res) => {
         email: usuario.email,
         role: usuario.role,
         empresa_id: usuario.empresa_id
-      }
+      },
+      permissoes
     });
   } catch (erro) {
     console.error('Erro ao fazer login:', erro);
