@@ -23,10 +23,10 @@ class FuncionarioController {
 
     try {
       const resultado = await global.db.query(
-        `INSERT INTO funcionarios (nome, cpf, funcao, observacoes, empresa_id, ativo)
-         VALUES ($1, $2, $3, $4, $5, true)
+        `INSERT INTO funcionarios (nome, cpf, funcao, empresa_id, ativo)
+         VALUES ($1, $2, $3, $4, true)
          RETURNING *`,
-        [nome, cpf, funcao, observacoes || null, empresa_id]
+        [nome, cpf, funcao, empresa_id]
       );
 
       res.status(201).json({
