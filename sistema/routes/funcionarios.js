@@ -5,6 +5,7 @@ const { verificarEmpresa } = require('../middlewares/empresa');
 const { verificarPermissao } = require('../middlewares/verificarPermissao');
 const funcionarioController = require('../controllers/funcionarioController');
 
+router.get('/sem-usuario', verificarToken, verificarEmpresa, funcionarioController.listarFuncionariosSemUsuario.bind(funcionarioController));
 router.get('/',       verificarToken, verificarEmpresa, verificarPermissao('funcionarios', 'listar'),  funcionarioController.listar.bind(funcionarioController));
 router.post('/',      verificarToken, verificarEmpresa, verificarPermissao('funcionarios', 'criar'),   funcionarioController.criar.bind(funcionarioController));
 router.put('/:id',    verificarToken, verificarEmpresa, verificarPermissao('funcionarios', 'editar'),  funcionarioController.atualizar.bind(funcionarioController));

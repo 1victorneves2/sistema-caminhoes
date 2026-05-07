@@ -327,6 +327,8 @@
           <td style="padding:1rem;">
             <button onclick="abrirModalEditar(${f.id},'${f.nome.replace(/'/g,"\\'")}','${f.cpf}','${f.funcao}')"
               style="background:linear-gradient(135deg,#059669,#10b981);color:#0a0f1f;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Editar</button>
+            <button onclick="abrirModalCriarAcesso(${f.id})"
+              style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:white;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Criar Acesso</button>
             <button onclick="deletarFuncionario(${f.id},'${f.nome.replace(/'/g,"\\'")}')"
               style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Deletar</button>
           </td>
@@ -347,6 +349,60 @@
   });
 
   listarFuncionarios();
+
+  let funcionarioSelecionado = null;
+
+  function abrirModalCriarAcesso(funcionario_id) {
+    funcionarioSelecionado = funcionario_id;
+    document.getElementById('modal-criar-acesso').style.display = 'block';
+    document.getElementById('backdrop-acesso').style.display = 'block';
+  }
+
+  function fecharModalAcesso() {
+    document.getElementById('modal-criar-acesso').style.display = 'none';
+    document.getElementById('backdrop-acesso').style.display = 'none';
+    document.getElementById('email-acesso').value = '';
+    document.getElementById('senha-acesso').value = '';
+  }
+
+  async function criarAcesso() {
+    const email = document.getElementById('email-acesso').value.trim();
+    const senha = document.getElementById('senha-acesso').value;
+
+    if (!email || !senha || senha.length < 6) {
+      mostrarNotif('Email e senha (mín 6 caracteres) são obrigatórios', true);
+      return;
+    }
+
+    try {
+      const response = await fetchComToken('/api/usuarios/funcionario', {
+        method: 'POST',
+        body: JSON.stringify({ funcionario_id: funcionarioSelecionado, email, senha })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        fecharModalAcesso();
+        alert(`Acesso criado!\nEmail: ${email}\nSenha: ${senha}`);
+        listarFuncionarios();
+      } else {
+        mostrarNotif('Erro: ' + (data.erro || 'Falha ao criar acesso'), true);
+      }
+    } catch {
+      mostrarNotif('Erro de conexão', true);
+    }
+  }
   </script>
 </body>
+
+<div id="modal-criar-acesso" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;border:1px solid #667eea;padding:30px;border-radius:12px;z-index:1001;width:90%;max-width:400px;">
+  <h3 style="color:#667eea;margin-top:0;">Criar Acesso para Funcionário</h3>
+  <input type="email" id="email-acesso" placeholder="Email" style="width:100%;padding:10px;margin:10px 0;background:#0f0f1e;border:1px solid #667eea;color:#eee;border-radius:6px;box-sizing:border-box;">
+  <input type="password" id="senha-acesso" placeholder="Senha (mín 6 caracteres)" style="width:100%;padding:10px;margin:10px 0;background:#0f0f1e;border:1px solid #667eea;color:#eee;border-radius:6px;box-sizing:border-box;">
+  <button onclick="criarAcesso()" style="width:100%;padding:12px;background:#667eea;color:white;border:none;cursor:pointer;margin:10px 0;border-radius:6px;font-weight:700;">Criar Acesso</button>
+  <button onclick="fecharModalAcesso()" style="width:100%;padding:12px;background:#444;color:white;border:none;cursor:pointer;border-radius:6px;">Cancelar</button>
+</div>
+<div id="backdrop-acesso" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;" onclick="fecharModalAcesso()"></div>
+
 </html>

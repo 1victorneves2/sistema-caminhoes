@@ -26,6 +26,9 @@ router.delete('/:id/permissoes/:permissao_id',...guard, perm.removerPermissaoDoU
 // Alterar senha — qualquer usuário autenticado pode alterar a própria; admin pode alterar de qualquer um
 router.put('/:id/alterar-senha', verificarToken, verificarEmpresa, c.alterarSenha);
 
+// Criar usuário para funcionário existente (operador)
+router.post('/funcionario', verificarToken, verificarEmpresa, c.criarUsuarioParaFuncionario);
+
 // CRUD de usuário (requer admin)
 router.put(   '/:id', ...guard, c.atualizar);
 router.delete('/:id', ...guard, c.deletar);

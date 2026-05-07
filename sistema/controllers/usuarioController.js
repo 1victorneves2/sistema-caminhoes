@@ -344,6 +344,62 @@ const usuarioController = {
     }
   },
 
+  // POST /api/usuarios/funcionario
+  async criarUsuarioParaFuncionario(req, res) {
+    const { funcionario_id, email, senha } = req.body;
+    const empresa_id = req.empresa_id;
+
+    if (!funcionario_id || !email || !senha) {
+      return res.status(400).json({ erro: 'Campos obrigatórios: funcionario_id, email, senha' });
+    }
+
+    try {
+      const funcionarioCheck = await global.db.query(
+        `SELECT nome FROM funcionarios WHERE id = $1 AND empresa_id = $2`,
+        [funcionario_id, empresa_id]
+      );
+
+      if (funcionarioCheck.rows.length === 0) {
+        return res.status(404).json({ erro: 'Funcionário não encontrado' });
+      }
+
+      const nome = funcionarioCheck.rows[0].nome;
+      const senhaHash = await bcrypt.hash(senha, 10);
+
+      const roleResult = await global.db.query(
+        `SELECT id FROM roles WHERE nome = 'motorista' AND empresa_id = $1`,
+        [empresa_id]
+      );
+
+      const role_id = roleResult.rows[0]?.id || 1;
+
+      const usuarioResult = await global.db.query(
+        `INSERT INTO usuarios (email, nome, senha, role, role_id, empresa_id, ativo)
+         VALUES ($1, $2, $3, 'motorista', $4, $5, true)
+         RETURNING id`,
+        [email, nome, senhaHash, role_id, empresa_id]
+      );
+
+      const usuario_id = usuarioResult.rows[0].id;
+
+      await global.db.query(
+        `UPDATE funcionarios SET usuario_id = $1 WHERE id = $2`,
+        [usuario_id, funcionario_id]
+      );
+
+      res.status(201).json({
+        mensagem: 'Usuário criado e vinculado com sucesso',
+        usuario_id,
+        email
+      });
+    } catch (erro) {
+      if (erro.code === '23505' || (erro.message && erro.message.includes('email'))) {
+        return res.status(400).json({ erro: 'Email já cadastrado' });
+      }
+      res.status(500).json({ erro: 'Erro ao criar usuário: ' + erro.message });
+    }
+  },
+
   // DELETE /api/usuarios/:id
   async deletar(req, res) {
     try {
