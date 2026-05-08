@@ -8,7 +8,8 @@ const NotaController = require('../controllers/notaController');
 // Rotas específicas ANTES das dinâmicas para evitar conflito de parâmetros
 router.get('/:carregamento_id/stats',                 verificarToken, verificarEmpresa, verificarPermissao('notas', 'listar'),      NotaController.obterStats);
 router.post('/:carregamento_id/lote',                 verificarToken, verificarEmpresa, verificarPermissao('notas', 'upload_lote'), NotaController.criarEmLote);
-router.put('/:carregamento_id/notas/:nota_id/status', verificarToken, verificarEmpresa, verificarPermissao('notas', 'editar'),      NotaController.atualizarStatus);
+router.put('/:carregamento_id/notas/:nota_id/status',   verificarToken, verificarEmpresa, verificarPermissao('notas', 'editar'), NotaController.atualizarStatus);
+router.put('/:carregamento_id/notas/:nota_id/detalhes', verificarToken, verificarEmpresa, verificarPermissao('notas', 'editar'), NotaController.atualizarDetalhes);
 
 router.get('/:carregamento_id',                       verificarToken, verificarEmpresa, verificarPermissao('notas', 'listar'),      NotaController.listar);
 router.post('/:carregamento_id',                      verificarToken, verificarEmpresa, verificarPermissao('notas', 'criar'),       NotaController.criar);

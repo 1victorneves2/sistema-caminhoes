@@ -32,12 +32,12 @@ class Carregamento {
     return result.rows[0] || null;
   }
 
-  static async criar(motorista_id, funcionario_id, caminhao_id, empresa_id) {
+  static async criar(motorista_id, funcionario_id, caminhao_id, empresa_id, numero_carregamento) {
     const result = await global.db.query(
-      `INSERT INTO carregamentos (motorista_id, funcionario_id, caminhao_id, status, empresa_id, data_saida)
-       VALUES ($1, $2, $3, 'carregado', $4, NOW())
+      `INSERT INTO carregamentos (motorista_id, funcionario_id, caminhao_id, status, empresa_id, data_saida, numero_carregamento)
+       VALUES ($1, $2, $3, 'carregado', $4, NOW(), $5)
        RETURNING *`,
-      [motorista_id, funcionario_id, caminhao_id, empresa_id]
+      [motorista_id, funcionario_id, caminhao_id, empresa_id, numero_carregamento || '']
     );
     return result.rows[0];
   }

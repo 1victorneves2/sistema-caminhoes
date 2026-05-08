@@ -103,6 +103,44 @@ class Nota {
     }
   }
 
+  static async atualizarDetalhes(id, campos, empresa_id) {
+    const sets = [];
+    const vals = [];
+    let idx = 1;
+
+    if (campos.tipo_pagamento !== undefined) {
+      sets.push(`tipo_pagamento = $${idx++}`);
+      vals.push(campos.tipo_pagamento || null);
+    }
+    if (campos.canhoto_assinado !== undefined) {
+      sets.push(`canhoto_assinado = $${idx++}`);
+      vals.push(!!campos.canhoto_assinado);
+      sets.push(`data_assinatura = $${idx++}`);
+      vals.push(campos.canhoto_assinado ? new Date() : null);
+    }
+    if (campos.numero_boleto !== undefined) {
+      sets.push(`numero_boleto = $${idx++}`);
+      vals.push(campos.numero_boleto || null);
+    }
+    if (campos.data_vencimento_boleto !== undefined) {
+      sets.push(`data_vencimento_boleto = $${idx++}`);
+      vals.push(campos.data_vencimento_boleto || null);
+    }
+
+    if (sets.length === 0) return null;
+
+    sets.push(`data_atualizacao = NOW()`);
+    vals.push(id, empresa_id);
+
+    const result = await global.db.query(
+      `UPDATE notas SET ${sets.join(', ')}
+       WHERE id = $${idx++} AND empresa_id = $${idx}
+       RETURNING *`,
+      vals
+    );
+    return result.rows[0] || null;
+  }
+
   static async obterEstatisticas(carregamento_id, empresa_id) {
     const result = await global.db.query(
       `SELECT

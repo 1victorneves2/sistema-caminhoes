@@ -100,6 +100,25 @@ class NotaController {
     }
   }
 
+  static async atualizarDetalhes(req, res) {
+    try {
+      const { nota_id } = req.params;
+      const { tipo_pagamento, canhoto_assinado, numero_boleto, data_vencimento_boleto } = req.body;
+
+      const nota = await Nota.atualizarDetalhes(
+        nota_id,
+        { tipo_pagamento, canhoto_assinado, numero_boleto, data_vencimento_boleto },
+        req.empresa_id
+      );
+
+      if (!nota) return res.status(404).json({ erro: 'Nota não encontrada' });
+      res.json({ sucesso: true, dados: nota });
+    } catch (erro) {
+      console.error('Erro ao atualizar detalhes da nota:', erro);
+      res.status(500).json({ erro: erro.message });
+    }
+  }
+
   static async obterStats(req, res) {
     try {
       const { carregamento_id } = req.params;

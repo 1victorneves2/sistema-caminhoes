@@ -73,6 +73,7 @@ async function carregarCarregamentos() {
     tbody.innerHTML += `
       <tr>
         <td>#${c.id}</td>
+        <td>${c.numero_carregamento || '—'}</td>
         <td>${c.placa || '—'}</td>
         <td>${c.motorista_nome || '—'}</td>
         <td>${c.conferente_nome || '—'}</td>
@@ -154,10 +155,15 @@ async function abrirModalCriar() {
 }
 
 async function criarCarregamento() {
-  const caminhao_id   = document.getElementById('selCaminhao').value;
-  const motorista_id  = document.getElementById('selMotorista').value;
-  const conferente_id = document.getElementById('selConferente').value;
+  const numero_carregamento = document.getElementById('inputNumeroCarregamento').value.trim();
+  const caminhao_id         = document.getElementById('selCaminhao').value;
+  const motorista_id        = document.getElementById('selMotorista').value;
+  const conferente_id       = document.getElementById('selConferente').value;
 
+  if (!numero_carregamento) {
+    mostrarNotificacao('Preencha o número do carregamento.', true);
+    return;
+  }
   if (!caminhao_id || !motorista_id || !conferente_id) {
     mostrarNotificacao('Selecione caminhão, motorista e conferente.', true);
     return;
@@ -165,13 +171,14 @@ async function criarCarregamento() {
 
   const resp = await fetchComToken('/api/carregamentos', {
     method: 'POST',
-    body: JSON.stringify({ caminhao_id, motorista_id, conferente_id })
+    body: JSON.stringify({ numero_carregamento, caminhao_id, motorista_id, conferente_id })
   });
   if (!resp) return;
   const data = await resp.json();
   if (data.erro) { mostrarNotificacao(data.erro, true); return; }
 
   mostrarNotificacao('Carregamento criado com sucesso!');
+  document.getElementById('inputNumeroCarregamento').value = '';
   fecharModal('modalCriar');
   carregarCarregamentos();
 }
@@ -243,12 +250,13 @@ async function recarregarNotas() {
   if (!rn) return;
   const notasData = await rn.json();
   const notas = Array.isArray(notasData) ? notasData : (notasData.dados || notasData.notas || []);
+  _notasCache = notas;
 
   const tbody = document.getElementById('tabelaNotas');
   tbody.innerHTML = '';
 
   if (notas.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:#94a3b8;">Nenhuma nota. Adicione notas abaixo.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:#94a3b8;">Nenhuma nota. Adicione notas abaixo.</td></tr>';
     return;
   }
 
@@ -260,9 +268,31 @@ async function recarregarNotas() {
     realocado:      { bg: '#4c1d9533', cor: '#a78bfa' }
   };
 
+  const labelPagamento = {
+    dinheiro:    'Dinheiro',
+    pix:         'PIX',
+    boleto:      'Boleto',
+    cartao:      'Cartão',
+    transferencia: 'Transferência',
+    a_prazo:     'A Prazo'
+  };
+
   notas.forEach((n, i) => {
     const cs = corStatus[n.status] || corStatus.pendente;
     const podeAlterar = n.status !== 'entregue' && n.status !== 'realocado';
+
+    const canhotoIcon = n.canhoto_assinado
+      ? `<span style="color:#10b981;font-weight:700;" title="Assinado em ${n.data_assinatura ? new Date(n.data_assinatura).toLocaleDateString('pt-BR') : ''}">✓ Assinado</span>`
+      : `<span style="color:#64748b;">—</span>`;
+
+    const boletoTxt = n.numero_boleto
+      ? `<span style="color:#60a5fa;font-size:11px;">${n.numero_boleto}${n.data_vencimento_boleto ? '<br><small style="color:#94a3b8;">' + new Date(n.data_vencimento_boleto + 'T00:00:00').toLocaleDateString('pt-BR') + '</small>' : ''}</span>`
+      : `<span style="color:#64748b;">—</span>`;
+
+    const pagTxt = n.tipo_pagamento
+      ? `<span style="color:#f59e0b;">${labelPagamento[n.tipo_pagamento] || n.tipo_pagamento}</span>`
+      : `<span style="color:#64748b;">—</span>`;
+
     tbody.innerHTML += `
       <tr>
         <td>${i + 1}</td>
@@ -270,12 +300,16 @@ async function recarregarNotas() {
         <td>${n.descricao || '—'}</td>
         <td>${n.quantidade || 1}</td>
         <td><span class="status-badge" style="background:${cs.bg};color:${cs.cor};border:1px solid ${cs.cor}44;">${n.status}</span></td>
+        <td>${canhotoIcon}</td>
+        <td>${boletoTxt}</td>
+        <td>${pagTxt}</td>
         <td>
           ${podeAlterar ? `
-            <button class="btn-acao btn-entregue"       onclick="atualizarStatusNota(${id},${n.id},'entregue')">✓ Entregue</button>
-            <button class="btn-acao btn-problema"        onclick="atualizarStatusNota(${id},${n.id},'problema')">✗ Problema</button>
-            <button class="btn-acao btn-nao-encontrado"  onclick="atualizarStatusNota(${id},${n.id},'nao_encontrado')">? Não Enc.</button>
-          ` : `<span style="color:#64748b;font-size:12px;">Encerrada</span>`}
+            <button class="btn-acao btn-entregue"       onclick="atualizarStatusNota(${id},${n.id},'entregue')">✓</button>
+            <button class="btn-acao btn-problema"        onclick="atualizarStatusNota(${id},${n.id},'problema')">✗</button>
+            <button class="btn-acao btn-nao-encontrado"  onclick="atualizarStatusNota(${id},${n.id},'nao_encontrado')">?</button>
+          ` : ''}
+          <button class="btn-acao" style="background:#1e40af22;color:#60a5fa;border:1px solid #1e40af55;" onclick="abrirModalDetalhesNota(${id},${n.id})">✏</button>
         </td>
       </tr>
     `;
@@ -561,6 +595,55 @@ async function confirmarEnvioFinanceiro() {
 
   fecharModal('modalFinanceiro');
   carregarCarregamentos();
+}
+
+// ============================================================
+// DETALHES DA NOTA (canhoto / boleto / pagamento)
+// ============================================================
+
+let _notaDetalhesCarregamento = null;
+let _notaDetalhesId = null;
+let _notasCache = [];
+
+function abrirModalDetalhesNota(carregamento_id, nota_id) {
+  _notaDetalhesCarregamento = carregamento_id;
+  _notaDetalhesId = nota_id;
+
+  const nota = _notasCache.find(n => n.id === nota_id) || {};
+
+  document.getElementById('detalheNotaNumero').textContent    = nota.numero_nota || '';
+  document.getElementById('detalheNotaDescricao').textContent = nota.descricao || '—';
+
+  document.getElementById('inputCanhoto').checked          = !!nota.canhoto_assinado;
+  document.getElementById('inputTipoPagamento').value      = nota.tipo_pagamento || '';
+  document.getElementById('inputNumeroBoleto').value       = nota.numero_boleto || '';
+  document.getElementById('inputVencimentoBoleto').value   = nota.data_vencimento_boleto
+    ? nota.data_vencimento_boleto.substring(0, 10)
+    : '';
+
+  document.getElementById('modalDetalhesNota').classList.add('ativo');
+}
+
+async function salvarDetalhesNota() {
+  const canhoto_assinado       = document.getElementById('inputCanhoto').checked;
+  const tipo_pagamento         = document.getElementById('inputTipoPagamento').value || null;
+  const numero_boleto          = document.getElementById('inputNumeroBoleto').value.trim() || null;
+  const data_vencimento_boleto = document.getElementById('inputVencimentoBoleto').value || null;
+
+  const resp = await fetchComToken(
+    `/api/notas/${_notaDetalhesCarregamento}/notas/${_notaDetalhesId}/detalhes`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ canhoto_assinado, tipo_pagamento, numero_boleto, data_vencimento_boleto })
+    }
+  );
+  if (!resp) return;
+  const data = await resp.json();
+  if (data.erro) { mostrarNotificacao(data.erro, true); return; }
+
+  mostrarNotificacao('Detalhes da nota salvos!');
+  fecharModal('modalDetalhesNota');
+  await recarregarNotas();
 }
 
 // ============================================================

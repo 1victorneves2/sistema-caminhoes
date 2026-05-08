@@ -70,6 +70,7 @@
       <thead>
         <tr style="background:linear-gradient(135deg,#2563eb,#3b82f6);color:#0a0f1f;">
           <th style="padding:1.2rem 1rem;text-align:left;font-size:12px;text-transform:uppercase;">ID</th>
+          <th style="padding:1.2rem 1rem;text-align:left;font-size:12px;text-transform:uppercase;">Nº Carregamento</th>
           <th style="padding:1.2rem 1rem;text-align:left;font-size:12px;text-transform:uppercase;">Caminhão</th>
           <th style="padding:1.2rem 1rem;text-align:left;font-size:12px;text-transform:uppercase;">Motorista</th>
           <th style="padding:1.2rem 1rem;text-align:left;font-size:12px;text-transform:uppercase;">Conferente</th>
@@ -111,7 +112,17 @@
         <input type="file" id="inputCSV" accept=".csv,.txt" onchange="uploadCSV(this.files[0])">
       </div>
       <table style="width:100%;border-collapse:collapse;">
-        <thead><tr style="background:rgba(37,99,235,0.15);color:#93c5fd;"><th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">#</th><th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Número Nota</th><th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Descrição</th><th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Qtd</th><th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Status</th><th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Ações</th></tr></thead>
+        <thead><tr style="background:rgba(37,99,235,0.15);color:#93c5fd;">
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">#</th>
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Nº Nota</th>
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Descrição</th>
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Qtd</th>
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Status</th>
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Canhoto</th>
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Boleto</th>
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Pagamento</th>
+          <th style="padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;">Ações</th>
+        </tr></thead>
         <tbody id="tabelaNotas"></tbody>
       </table>
     </div>
@@ -121,6 +132,7 @@
   <div id="modalCriar" class="modal-over">
     <div class="modal-box">
       <h3>➕ Novo Carregamento</h3>
+      <div class="form-field"><label>Número do Carregamento</label><input type="text" id="inputNumeroCarregamento" placeholder="Ex: CARGA-001"></div>
       <div class="form-field"><label>Caminhão</label><select id="selCaminhao"><option value="">Carregando...</option></select></div>
       <div class="form-field"><label>Motorista</label><select id="selMotorista"><option value="">Carregando...</option></select></div>
       <div class="form-field"><label>Conferente</label><select id="selConferente"><option value="">Carregando...</option></select></div>
@@ -146,6 +158,45 @@
       <div id="financeiroDestinoWrap" class="form-field" style="display:none;"><label>Carregamento SAC</label><select id="selDestinoFinanceiro"><option value="">Selecione o carregamento SAC...</option></select><small style="color:#64748b;margin-top:6px;display:block;">As notas com problema serão transferidas antes do envio ao financeiro.</small></div>
       <div class="form-field"><label>Motivo / Observação (opcional)</label><input type="text" id="inputMotivoFinanceiro" placeholder="Ex: Entrega concluída — 3 notas no SAC" style="width:100%;"></div>
       <div class="modal-buttons"><button class="btn-cancelar" onclick="fecharModal('modalFinanceiro')">Cancelar</button><button class="btn-primario" style="background:linear-gradient(135deg,#059669,#10b981);color:#0a0f1f;" id="btnConfirmarFinanceiro" onclick="confirmarEnvioFinanceiro()">Confirmar</button></div>
+    </div>
+  </div>
+
+  <!-- MODAL DETALHES DA NOTA -->
+  <div id="modalDetalhesNota" class="modal-over">
+    <div class="modal-box">
+      <h3>✏ Detalhes da Nota</h3>
+      <p style="color:#94a3b8;margin-bottom:1.5rem;font-size:14px;">
+        <strong id="detalheNotaNumero" style="color:#e0e7ff;"></strong>
+        — <span id="detalheNotaDescricao"></span>
+      </p>
+      <div class="form-field" style="display:flex;align-items:center;gap:12px;">
+        <input type="checkbox" id="inputCanhoto" style="width:20px;height:20px;cursor:pointer;">
+        <label for="inputCanhoto" style="margin-bottom:0;cursor:pointer;">Canhoto assinado</label>
+      </div>
+      <div class="form-field">
+        <label>Tipo de Pagamento</label>
+        <select id="inputTipoPagamento">
+          <option value="">Não informado</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="pix">PIX</option>
+          <option value="boleto">Boleto</option>
+          <option value="cartao">Cartão</option>
+          <option value="transferencia">Transferência</option>
+          <option value="a_prazo">A Prazo</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Número do Boleto</label>
+        <input type="text" id="inputNumeroBoleto" placeholder="Código ou número do boleto">
+      </div>
+      <div class="form-field">
+        <label>Vencimento do Boleto</label>
+        <input type="date" id="inputVencimentoBoleto">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-cancelar" onclick="fecharModal('modalDetalhesNota')">Cancelar</button>
+        <button class="btn-primario" onclick="salvarDetalhesNota()">Salvar</button>
+      </div>
     </div>
   </div>
 

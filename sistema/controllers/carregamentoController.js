@@ -39,14 +39,18 @@ class CarregamentoController {
 
   static async criar(req, res) {
     try {
-      const { motorista_id, funcionario_id, caminhao_id } = req.body;
+      const { motorista_id, funcionario_id, caminhao_id, numero_carregamento } = req.body;
 
       if (!motorista_id || !funcionario_id || !caminhao_id) {
         return res.status(400).json({ erro: 'motorista_id, funcionario_id e caminhao_id são obrigatórios' });
       }
 
+      if (!numero_carregamento || !numero_carregamento.trim()) {
+        return res.status(400).json({ erro: 'Número do carregamento é obrigatório' });
+      }
+
       const carregamento = await Carregamento.criar(
-        motorista_id, funcionario_id, caminhao_id, req.empresa_id
+        motorista_id, funcionario_id, caminhao_id, req.empresa_id, numero_carregamento.trim()
       );
 
       res.status(201).json({

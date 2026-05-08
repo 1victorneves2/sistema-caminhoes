@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Meu Rastreamento</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    * { box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent; }
+    body { background:#0a0f1f;color:#e0e7ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column; }
+
+    nav { background:linear-gradient(135deg,#0a0f1f 0%,#141a2f 100%);border-bottom:1px solid rgba(37,99,235,0.2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-shrink:0; }
+    nav h1 { font-size:15px;font-weight:800;color:#60a5fa;text-transform:uppercase;letter-spacing:2px; }
+    .nav-sair { font-size:13px;color:#ef4444;text-decoration:none;font-weight:700; }
+
+    .painel { padding:12px 16px;flex-shrink:0; }
+
+    .info-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px; }
+    .info-card { background:linear-gradient(135deg,#141a2f,#1e2847);border:1px solid rgba(37,99,235,0.15);border-radius:10px;padding:10px 12px; }
+    .info-label { font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px; }
+    .info-value { font-size:14px;font-weight:700;color:#e0e7ff; }
+
+    .status-bar { display:flex;align-items:center;justify-content:space-between;background:rgba(10,15,31,0.6);border:1px solid rgba(37,99,235,0.15);border-radius:10px;padding:10px 14px;margin-bottom:10px; }
+    .status-dot { width:8px;height:8px;border-radius:50%;margin-right:6px;display:inline-block; }
+    .dot-on  { background:#10b981;box-shadow:0 0 6px #10b981; }
+    .dot-off { background:#ef4444; }
+    .status-text { font-size:12px;font-weight:700; }
+    .btn-rastrear { padding:8px 18px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase; }
+    .btn-iniciar  { background:linear-gradient(135deg,#059669,#10b981);color:#0a0f1f; }
+    .btn-parar    { background:linear-gradient(135deg,#dc2626,#ef4444);color:white; }
+
+    #mapa { flex:1;min-height:300px;z-index:1; }
+
+    .notif { position:fixed;top:16px;right:16px;left:16px;background:linear-gradient(135deg,#059669,#10b981);color:white;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;animation:slideIn 0.3s ease-out;display:none; }
+    .notif.erro { background:linear-gradient(135deg,#dc2626,#ef4444); }
+    @keyframes slideIn { from{transform:translateY(-40px);opacity:0;}to{transform:translateY(0);opacity:1;} }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <h1>Meu Rastreamento</h1>
+    <a href="#" class="nav-sair" onclick="fazerLogout(); return false;">Sair</a>
+  </nav>
+
+  <div class="notif" id="notif"></div>
+
+  <div class="painel">
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-label">Carregamento</div>
+        <div class="info-value" id="info-carregamento">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Caminhão</div>
+        <div class="info-value" id="info-caminhao">—</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Velocidade</div>
+        <div class="info-value" id="info-velocidade">— km/h</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Última Atualização</div>
+        <div class="info-value" id="info-timestamp">—</div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div style="display:flex;align-items:center;">
+        <span class="status-dot dot-off" id="status-dot"></span>
+        <span class="status-text" id="status-text">GPS inativo</span>
+      </div>
+      <button class="btn-rastrear btn-iniciar" id="btn-toggle" onclick="toggleRastreamento()">Iniciar GPS</button>
+    </div>
+  </div>
+
+  <div id="mapa"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  const token   = localStorage.getItem('token');
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+  if (!token) window.location.href = '/login.html';
+
+  // ----------------------------------------------------------------
+  // Helpers
+  // ----------------------------------------------------------------
+  function mostrarNotif(msg, erro) {
+    const el = document.getElementById('notif');
+    el.textContent = msg;
+    el.className = 'notif' + (erro ? ' erro' : '');
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3500);
+  }
+
+  function fazerLogout() {
+    localStorage.clear();
+    window.location.href = '/login.html';
+  }
+
+  async function apiFetch(url, opts = {}) {
+    const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    const resp = await fetch(url, { ...opts, headers });
+    if (resp.status === 401) { fazerLogout(); }
+    return resp;
+  }
+
+  // ----------------------------------------------------------------
+  // Estado
+  // ----------------------------------------------------------------
+  let carregamento_id = null;
+  let caminhao_id     = null;
+  let marcador        = null;
+  let rastreando      = false;
+  let watchId         = null;
+  let ws              = null;
+  let mapa            = null;
+
+  // ----------------------------------------------------------------
+  // Mapa
+  // ----------------------------------------------------------------
+  function inicializarMapa() {
+    mapa = L.map('mapa', { zoomControl: true }).setView([-15.7942, -47.8825], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19
+    }).addTo(mapa);
+  }
+
+  // ----------------------------------------------------------------
+  // WebSocket
+  // ----------------------------------------------------------------
+  function conectarWS() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}?token=${encodeURIComponent(token)}`);
+    ws.onopen  = () => console.log('WS conectado');
+    ws.onerror = () => {};
+    ws.onclose = () => {
+      if (rastreando) setTimeout(conectarWS, 4000);
+    };
+  }
+
+  function enviarGPS(lat, lng, velocidade, precisao) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      tipo: 'GPS',
+      caminhao_id: caminhao_id,
+      carregamento_id: carregamento_id,
+      lat: lat,
+      lng: lng,
+      velocidade: velocidade,
+      precisao: precisao
+    }));
+  }
+
+  // ----------------------------------------------------------------
+  // Carregar carregamento ativo
+  // ----------------------------------------------------------------
+  async function carregarCarregamento() {
+    try {
+      const resp = await apiFetch('/api/carregamentos/minhas-entregas');
+      const data = await resp.json();
+      const lista = data.carregamentos || [];
+
+      const ativo = lista.find(c => ['carregado','em_rota','saiu_para_entrega'].includes(c.status));
+      if (!ativo) {
+        document.getElementById('info-carregamento').textContent = 'Sem entrega ativa';
+        mostrarNotif('Nenhuma entrega ativa no momento', false);
+        return;
+      }
+
+      carregamento_id = ativo.id;
+      caminhao_id     = ativo.caminhao_id;
+
+      document.getElementById('info-carregamento').textContent = '#' + ativo.id;
+      document.getElementById('info-caminhao').textContent     = ativo.placa || ('Cam #' + ativo.caminhao_id);
+    } catch (e) {
+      mostrarNotif('Erro ao carregar entrega', true);
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Rastreamento GPS
+  // ----------------------------------------------------------------
+  function toggleRastreamento() {
+    if (rastreando) {
+      pararRastreamento();
+    } else {
+      iniciarRastreamento();
+    }
+  }
+
+  function iniciarRastreamento() {
+    if (!carregamento_id || !caminhao_id) {
+      mostrarNotif('Nenhuma entrega ativa para rastrear', true);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      mostrarNotif('GPS não suportado neste dispositivo', true);
+      return;
+    }
+
+    rastreando = true;
+    conectarWS();
+
+    document.getElementById('status-dot').className  = 'status-dot dot-on';
+    document.getElementById('status-text').textContent = 'GPS ativo — enviando...';
+    document.getElementById('btn-toggle').textContent   = 'Parar GPS';
+    document.getElementById('btn-toggle').className     = 'btn-rastrear btn-parar';
+
+    watchId = navigator.geolocation.watchPosition(
+      onPosicao,
+      onErroPosicao,
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    );
+  }
+
+  function pararRastreamento() {
+    rastreando = false;
+    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (ws) { ws.close(); ws = null; }
+
+    document.getElementById('status-dot').className   = 'status-dot dot-off';
+    document.getElementById('status-text').textContent = 'GPS inativo';
+    document.getElementById('btn-toggle').textContent   = 'Iniciar GPS';
+    document.getElementById('btn-toggle').className     = 'btn-rastrear btn-iniciar';
+  }
+
+  function onPosicao(pos) {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const vel = pos.coords.speed != null ? Math.round(pos.coords.speed * 3.6) : 0;
+    const pre = Math.round(pos.coords.accuracy || 0);
+
+    // Enviar via WebSocket
+    enviarGPS(lat, lng, vel, pre);
+
+    // Atualizar mapa
+    const latlng = [lat, lng];
+    if (marcador) {
+      marcador.setLatLng(latlng);
+    } else {
+      const icone = L.divIcon({
+        className: '',
+        html: '<div style="background:rgba(10,15,31,0.92);border:2px solid #10b981;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 0 4px rgba(16,185,129,0.3);">🚛</div>',
+        iconSize: [40, 40], iconAnchor: [20, 20]
+      });
+      marcador = L.marker(latlng, { icon: icone }).addTo(mapa);
+      marcador.bindPopup('Você está aqui').openPopup();
+    }
+    mapa.setView(latlng, 15, { animate: true });
+
+    // Atualizar painel
+    document.getElementById('info-velocidade').textContent  = vel + ' km/h';
+    document.getElementById('info-timestamp').textContent   = new Date().toLocaleTimeString('pt-BR');
+  }
+
+  function onErroPosicao(err) {
+    const msgs = {
+      1: 'Permissão de GPS negada. Habilite a localização.',
+      2: 'GPS indisponível no momento.',
+      3: 'Tempo esgotado ao obter GPS.'
+    };
+    mostrarNotif(msgs[err.code] || 'Erro de GPS', true);
+    pararRastreamento();
+  }
+
+  // ----------------------------------------------------------------
+  // Init
+  // ----------------------------------------------------------------
+  inicializarMapa();
+  carregarCarregamento();
+  </script>
+</body>
+</html>
