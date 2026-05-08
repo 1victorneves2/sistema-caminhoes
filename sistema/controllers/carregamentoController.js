@@ -270,6 +270,108 @@ class CarregamentoController {
       res.status(500).json({ erro: erro.message });
     }
   }
+  // PUT /api/carregamentos/:id/motorista-status
+  static async atualizarStatusMotorista(req, res) {
+    const { id } = req.params;
+    const { status } = req.body;
+    const usuario_id = req.user.id;
+    const empresa_id = req.empresa_id;
+
+    const statusValidos = ['em_rota', 'entregue', 'voltando', 'problema'];
+    if (!statusValidos.includes(status)) {
+      return res.status(400).json({ erro: `Status inválido. Use: ${statusValidos.join(', ')}` });
+    }
+
+    try {
+      // Verificar se o carregamento pertence ao motorista logado
+      const check = await global.db.query(
+        `SELECT c.id, f.usuario_id
+         FROM carregamentos c
+         JOIN motoristas m    ON c.motorista_id = m.id
+         JOIN funcionarios f  ON f.nome = m.nome AND f.empresa_id = c.empresa_id
+         WHERE c.id = $1 AND c.empresa_id = $2`,
+        [id, empresa_id]
+      );
+
+      if (check.rows.length === 0) {
+        return res.status(404).json({ erro: 'Carregamento não encontrado' });
+      }
+
+      if (check.rows[0].usuario_id !== usuario_id) {
+        return res.status(403).json({ erro: 'Você não pode atualizar este carregamento' });
+      }
+
+      const resultado = await global.db.query(
+        `UPDATE carregamentos
+         SET status_motorista = $1, data_atualizacao = NOW()
+         WHERE id = $2 AND empresa_id = $3
+         RETURNING *`,
+        [status, id, empresa_id]
+      );
+
+      notificarAdmins('CARREGAMENTO_ATUALIZADO', {
+        carregamento_id: parseInt(id),
+        status_motorista: status,
+        motorista: req.user.nome
+      });
+
+      res.json({
+        mensagem: 'Status atualizado com sucesso',
+        carregamento: resultado.rows[0]
+      });
+    } catch (erro) {
+      console.error('Erro ao atualizar status motorista:', erro);
+      res.status(500).json({ erro: erro.message });
+    }
+  }
+
+  // GET /api/carregamentos/minhas-entregas
+  static async minhasEntregas(req, res) {
+    const usuario_id = req.user.id;
+    const empresa_id = req.empresa_id;
+
+    try {
+      // Localizar funcionário vinculado ao usuário logado
+      const funcResult = await global.db.query(
+        `SELECT nome FROM funcionarios WHERE usuario_id = $1 AND empresa_id = $2`,
+        [usuario_id, empresa_id]
+      );
+
+      if (funcResult.rows.length === 0) {
+        return res.json({ carregamentos: [] });
+      }
+
+      const nome = funcResult.rows[0].nome;
+
+      // Localizar motorista pelo mesmo nome
+      const motResult = await global.db.query(
+        `SELECT id FROM motoristas WHERE nome = $1 AND empresa_id = $2`,
+        [nome, empresa_id]
+      );
+
+      if (motResult.rows.length === 0) {
+        return res.json({ carregamentos: [] });
+      }
+
+      const motorista_id = motResult.rows[0].id;
+
+      const carregamentos = await global.db.query(
+        `SELECT c.*,
+                cam.placa,
+                cam.modelo
+         FROM carregamentos c
+         LEFT JOIN caminhoes cam ON cam.id = c.caminhao_id
+         WHERE c.motorista_id = $1 AND c.empresa_id = $2
+         ORDER BY c.id DESC`,
+        [motorista_id, empresa_id]
+      );
+
+      res.json({ carregamentos: carregamentos.rows });
+    } catch (erro) {
+      console.error('Erro ao buscar minhas entregas:', erro);
+      res.status(500).json({ erro: erro.message });
+    }
+  }
 }
 
 module.exports = CarregamentoController;

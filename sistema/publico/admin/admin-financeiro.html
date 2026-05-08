@@ -65,7 +65,7 @@
         </select>
       </div>
       <table>
-        <thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th>Função / Tipo</th><th>Ativo</th><th>Ações</th></tr></thead>
+        <thead><tr><th>ID</th><th>Nome</th><th>CPF</th><th>Função / Tipo</th><th>Ativo</th><th>Ações</th><th>Acesso</th></tr></thead>
         <tbody id="tabelaFuncionarios"></tbody>
       </table>
     </div>
@@ -388,11 +388,12 @@ function carregarFuncionarios() {
   var filtro=document.getElementById('filtroFuncao')?document.getElementById('filtroFuncao').value:'';
   fetch('/api/funcionarios'+(filtro?'?funcao='+encodeURIComponent(filtro):''),{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(function(list){
     var tbody=document.getElementById('tabelaFuncionarios'); tbody.innerHTML='';
-    if(!list.length){ tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:rgba(224,231,255,0.4);">Nenhum funcionário encontrado</td></tr>'; return; }
+    if(!list.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:rgba(224,231,255,0.4);">Nenhum funcionário encontrado</td></tr>'; return; }
     list.forEach(function(f){
       sessionStorage.setItem('funcionario_'+f.id,JSON.stringify(f));
       var bg=f.funcao==='Motorista'?'background:rgba(16,185,129,0.15);color:#10b981;':f.funcao==='Gerente'?'background:rgba(245,158,11,0.15);color:#fbbf24;':'background:rgba(37,99,235,0.15);color:#60a5fa;';
-      tbody.innerHTML+='<tr style="border-top:1px solid rgba(37,99,235,0.1);"><td style="padding:1.25rem;color:#e0e7ff;">'+f.id+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+f.nome+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+f.cpf+'</td><td style="padding:1.25rem;"><span style="'+bg+'padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;">'+f.funcao+'</span></td><td style="padding:1.25rem;color:#e0e7ff;">'+(f.ativo?'Sim':'Não')+'</td><td style="padding:1.25rem;"><button onclick="abrirModalFuncionario('+f.id+')" style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Editar</button><button onclick="deletarFuncionario('+f.id+')" style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Deletar</button></td></tr>';
+      var acessoTd=f.usuario_id?'<span style="color:#10b981;font-weight:700;font-size:11px;text-transform:uppercase;">✓ Vinculado</span>':'<button onclick="abrirModalCriarAcessoAdmin('+f.id+',\''+f.nome.replace(/'/g,"\\'")+'\')" style="background:#4CAF50;color:white;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Criar Acesso</button>';
+      tbody.innerHTML+='<tr style="border-top:1px solid rgba(37,99,235,0.1);"><td style="padding:1.25rem;color:#e0e7ff;">'+f.id+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+f.nome+'</td><td style="padding:1.25rem;color:#e0e7ff;">'+f.cpf+'</td><td style="padding:1.25rem;"><span style="'+bg+'padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;">'+f.funcao+'</span></td><td style="padding:1.25rem;color:#e0e7ff;">'+(f.ativo?'Sim':'Não')+'</td><td style="padding:1.25rem;"><button onclick="abrirModalFuncionario('+f.id+')" style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Editar</button><button onclick="deletarFuncionario('+f.id+')" style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:8px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Deletar</button></td><td style="padding:1.25rem;">'+acessoTd+'</td></tr>';
     });
   });
 }
@@ -508,7 +509,56 @@ async function confirmarRejeitar(){
 
 carregarCaminhoes();
 conectarWebSocket();
+
+function abrirModalCriarAcessoAdmin(funcionario_id, nome) {
+  document.getElementById('acesso-func-id').value = funcionario_id;
+  document.getElementById('acesso-func-nome').textContent = nome;
+  document.getElementById('acesso-email').value = '';
+  document.getElementById('acesso-senha').value = '';
+  document.getElementById('modal-acesso-admin').style.display = 'flex';
+}
+function fecharModalAcessoAdmin() {
+  document.getElementById('modal-acesso-admin').style.display = 'none';
+}
+async function salvarAcessoAdmin() {
+  var id = document.getElementById('acesso-func-id').value;
+  var email = document.getElementById('acesso-email').value.trim();
+  var senha = document.getElementById('acesso-senha').value;
+  if (!email || !senha || senha.length < 6) { alert('Preencha email e senha (mín 6 caracteres)'); return; }
+  var resp = await fetch('/api/usuarios/funcionario', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({funcionario_id:parseInt(id), email:email, senha:senha})});
+  var data = await resp.json();
+  if (resp.ok) {
+    alert('✓ Acesso criado!\n\nEmail: '+email+'\nSenha: '+senha+'\n\nCompartilhe com o motorista.');
+    fecharModalAcessoAdmin();
+    carregarFuncionarios();
+  } else {
+    alert('Erro: ' + data.erro);
+  }
+}
   </script>
   <script src="/scripts/auth.js"></script>
+
+  <!-- MODAL CRIAR ACESSO -->
+  <div id="modal-acesso-admin" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:2000;justify-content:center;align-items:center;">
+    <div style="background:#1a1a2e;border:1px solid #667eea;padding:30px;border-radius:12px;width:90%;max-width:460px;">
+      <h3 style="color:#667eea;margin-top:0;text-align:center;">Criar Acesso para Funcionário</h3>
+      <div style="background:#0f0f1e;padding:12px 15px;border-radius:6px;margin-bottom:20px;border-left:3px solid #667eea;">
+        <p style="color:#999;margin:0;font-size:11px;margin-bottom:4px;">FUNCIONÁRIO:</p>
+        <p style="color:#667eea;margin:0;font-weight:bold;font-size:14px;" id="acesso-func-nome"></p>
+      </div>
+      <input type="hidden" id="acesso-func-id">
+      <div style="margin-bottom:15px;">
+        <label style="color:#eee;display:block;margin-bottom:6px;font-size:13px;"><strong>Email</strong></label>
+        <input type="email" id="acesso-email" placeholder="email@exemplo.com" style="width:100%;padding:10px;background:#0f0f1e;border:1px solid #667eea;color:#eee;border-radius:6px;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="color:#eee;display:block;margin-bottom:6px;font-size:13px;"><strong>Senha (mín. 6 caracteres)</strong></label>
+        <input type="password" id="acesso-senha" placeholder="Digite uma senha" style="width:100%;padding:10px;background:#0f0f1e;border:1px solid #667eea;color:#eee;border-radius:6px;box-sizing:border-box;">
+      </div>
+      <button onclick="salvarAcessoAdmin()" style="width:100%;padding:12px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;margin-bottom:8px;font-size:14px;">Criar Acesso</button>
+      <button onclick="fecharModalAcessoAdmin()" style="width:100%;padding:12px;background:#444;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Cancelar</button>
+    </div>
+  </div>
+
 </body>
 </html>

@@ -6,7 +6,7 @@ class Carregamento {
               SUM(CASE WHEN n.status = 'entregue' THEN 1 ELSE 0 END) AS notas_entregues
        FROM carregamentos c
        LEFT JOIN notas n ON n.carregamento_id = c.id
-       WHERE c.empresa_id = $1 AND c.ativo = true
+       WHERE c.empresa_id = $1
        GROUP BY c.id
        ORDER BY c.id DESC
        LIMIT $2 OFFSET $3`,

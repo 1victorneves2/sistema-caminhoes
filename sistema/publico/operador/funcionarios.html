@@ -66,10 +66,11 @@
           <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Função</th>
           <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Ativo</th>
           <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Ações</th>
+          <th style="padding:1rem;text-align:left;font-size:12px;text-transform:uppercase;">Acesso</th>
         </tr>
       </thead>
       <tbody id="tabelaFuncionarios">
-        <tr><td colspan="6" style="padding:2rem;text-align:center;color:rgba(224,231,255,0.4);">Carregando...</td></tr>
+        <tr><td colspan="7" style="padding:2rem;text-align:center;color:rgba(224,231,255,0.4);">Carregando...</td></tr>
       </tbody>
     </table>
   </main>
@@ -305,7 +306,7 @@
       if (!r.ok) {
         console.error('Erro ao listar funcionários:', r.status);
         document.getElementById('tabelaFuncionarios').innerHTML =
-          '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#ef4444;">Erro ao carregar (' + r.status + ')</td></tr>';
+          '<tr><td colspan="7" style="padding:2rem;text-align:center;color:#ef4444;">Erro ao carregar (' + r.status + ')</td></tr>';
         return;
       }
 
@@ -313,7 +314,7 @@
       const tbody = document.getElementById('tabelaFuncionarios');
 
       if (!Array.isArray(lista) || !lista.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="padding:2rem;text-align:center;color:rgba(224,231,255,0.4);">Nenhum funcionário encontrado</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:2rem;text-align:center;color:rgba(224,231,255,0.4);">Nenhum funcionário encontrado</td></tr>';
         return;
       }
 
@@ -327,16 +328,20 @@
           <td style="padding:1rem;">
             <button onclick="abrirModalEditar(${f.id},'${f.nome.replace(/'/g,"\\'")}','${f.cpf}','${f.funcao}')"
               style="background:linear-gradient(135deg,#059669,#10b981);color:#0a0f1f;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Editar</button>
-            <button onclick="abrirModalCriarAcesso(${f.id})"
-              style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);color:white;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;margin-right:5px;">Criar Acesso</button>
             <button onclick="deletarFuncionario(${f.id},'${f.nome.replace(/'/g,"\\'")}')"
               style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Deletar</button>
+          </td>
+          <td style="padding:1rem;">
+            ${f.usuario_id
+              ? `<span style="color:#10b981;font-weight:700;font-size:11px;text-transform:uppercase;">✓ Vinculado</span>`
+              : `<button onclick="abrirModalCriarAcessoSelecionado(${f.id},'${f.nome.replace(/'/g,"\\'")}','${f.cpf}')" style="background:#4CAF50;color:white;padding:7px 14px;font-size:11px;border:none;border-radius:6px;font-weight:700;cursor:pointer;text-transform:uppercase;">Criar Acesso</button>`
+            }
           </td>
         </tr>`).join('');
     } catch (err) {
       console.error('Erro ao listar funcionários:', err);
       document.getElementById('tabelaFuncionarios').innerHTML =
-        '<tr><td colspan="6" style="padding:2rem;text-align:center;color:#ef4444;">Erro de conexão</td></tr>';
+        '<tr><td colspan="7" style="padding:2rem;text-align:center;color:#ef4444;">Erro de conexão</td></tr>';
     }
   }
 
@@ -350,10 +355,10 @@
 
   listarFuncionarios();
 
-  let funcionarioSelecionado = null;
-
-  function abrirModalCriarAcesso(funcionario_id) {
-    funcionarioSelecionado = funcionario_id;
+  function abrirModalCriarAcessoSelecionado(funcionario_id, nome, cpf) {
+    document.getElementById('funcionario-select').value = funcionario_id;
+    document.getElementById('nome-funcionario-selecionado').textContent = nome;
+    document.getElementById('cpf-funcionario-selecionado').textContent = cpf || '';
     document.getElementById('modal-criar-acesso').style.display = 'block';
     document.getElementById('backdrop-acesso').style.display = 'block';
   }
@@ -363,11 +368,20 @@
     document.getElementById('backdrop-acesso').style.display = 'none';
     document.getElementById('email-acesso').value = '';
     document.getElementById('senha-acesso').value = '';
+    document.getElementById('funcionario-select').value = '';
+    document.getElementById('nome-funcionario-selecionado').textContent = '--';
+    document.getElementById('cpf-funcionario-selecionado').textContent = '';
   }
 
   async function criarAcesso() {
+    const funcionario_id = document.getElementById('funcionario-select').value;
     const email = document.getElementById('email-acesso').value.trim();
     const senha = document.getElementById('senha-acesso').value;
+
+    if (!funcionario_id) {
+      mostrarNotif('Erro: Funcionário não selecionado', true);
+      return;
+    }
 
     if (!email || !senha || senha.length < 6) {
       mostrarNotif('Email e senha (mín 6 caracteres) são obrigatórios', true);
@@ -377,14 +391,14 @@
     try {
       const response = await fetchComToken('/api/usuarios/funcionario', {
         method: 'POST',
-        body: JSON.stringify({ funcionario_id: funcionarioSelecionado, email, senha })
+        body: JSON.stringify({ funcionario_id: parseInt(funcionario_id), email, senha })
       });
 
       const data = await response.json();
 
       if (response.ok) {
         fecharModalAcesso();
-        alert(`Acesso criado!\nEmail: ${email}\nSenha: ${senha}`);
+        alert(`✓ Acesso criado com sucesso!\n\nEmail: ${email}\nSenha: ${senha}\n\nCompartilhe com o motorista.`);
         listarFuncionarios();
       } else {
         mostrarNotif('Erro: ' + (data.erro || 'Falha ao criar acesso'), true);
@@ -394,15 +408,32 @@
     }
   }
   </script>
+
+  <!-- MODAL CRIAR ACESSO -->
+  <div id="modal-criar-acesso" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;border:1px solid #667eea;padding:30px;border-radius:12px;z-index:1001;width:90%;max-width:500px;">
+    <h3 style="color:#667eea;margin-top:0;text-align:center;">Criar Acesso para Funcionário</h3>
+
+    <div style="background:#0f0f1e;padding:15px;border-radius:6px;margin:20px 0;border-left:3px solid #667eea;">
+      <p style="color:#999;margin:0;font-size:12px;margin-bottom:6px;">FUNCIONÁRIO SELECIONADO:</p>
+      <p style="color:#667eea;margin:0;font-weight:bold;font-size:14px;" id="nome-funcionario-selecionado">--</p>
+      <p style="color:#64748b;margin:4px 0 0;font-size:12px;font-family:monospace;" id="cpf-funcionario-selecionado"></p>
+    </div>
+
+    <div style="margin:20px 0;">
+      <label style="color:#eee;display:block;margin-bottom:8px;"><strong>Email do Acesso</strong></label>
+      <input type="email" id="email-acesso" placeholder="example@email.com" style="width:100%;padding:10px;background:#0f0f1e;border:1px solid #667eea;color:#eee;border-radius:6px;box-sizing:border-box;font-size:14px;">
+    </div>
+
+    <div style="margin:20px 0;">
+      <label style="color:#eee;display:block;margin-bottom:8px;"><strong>Senha (Mínimo 6 caracteres)</strong></label>
+      <input type="password" id="senha-acesso" placeholder="Digite uma senha segura" style="width:100%;padding:10px;background:#0f0f1e;border:1px solid #667eea;color:#eee;border-radius:6px;box-sizing:border-box;font-size:14px;">
+    </div>
+
+    <button onclick="criarAcesso()" style="width:100%;padding:12px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;margin:15px 0 10px;font-size:14px;">Criar Acesso</button>
+    <button onclick="fecharModalAcesso()" style="width:100%;padding:12px;background:#444;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Cancelar</button>
+  </div>
+  <div id="backdrop-acesso" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;" onclick="fecharModalAcesso()"></div>
+  <input type="hidden" id="funcionario-select">
+
 </body>
-
-<div id="modal-criar-acesso" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;border:1px solid #667eea;padding:30px;border-radius:12px;z-index:1001;width:90%;max-width:400px;">
-  <h3 style="color:#667eea;margin-top:0;">Criar Acesso para Funcionário</h3>
-  <input type="email" id="email-acesso" placeholder="Email" style="width:100%;padding:10px;margin:10px 0;background:#0f0f1e;border:1px solid #667eea;color:#eee;border-radius:6px;box-sizing:border-box;">
-  <input type="password" id="senha-acesso" placeholder="Senha (mín 6 caracteres)" style="width:100%;padding:10px;margin:10px 0;background:#0f0f1e;border:1px solid #667eea;color:#eee;border-radius:6px;box-sizing:border-box;">
-  <button onclick="criarAcesso()" style="width:100%;padding:12px;background:#667eea;color:white;border:none;cursor:pointer;margin:10px 0;border-radius:6px;font-weight:700;">Criar Acesso</button>
-  <button onclick="fecharModalAcesso()" style="width:100%;padding:12px;background:#444;color:white;border:none;cursor:pointer;border-radius:6px;">Cancelar</button>
-</div>
-<div id="backdrop-acesso" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;" onclick="fecharModalAcesso()"></div>
-
 </html>

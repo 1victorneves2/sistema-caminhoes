@@ -355,12 +355,13 @@ const usuarioController = {
 
     try {
       const funcionarioCheck = await global.db.query(
-        `SELECT nome FROM funcionarios WHERE id = $1 AND empresa_id = $2`,
+        `SELECT id, nome FROM funcionarios
+         WHERE id = $1 AND empresa_id = $2 AND usuario_id IS NULL`,
         [funcionario_id, empresa_id]
       );
 
       if (funcionarioCheck.rows.length === 0) {
-        return res.status(404).json({ erro: 'Funcionário não encontrado' });
+        return res.status(404).json({ erro: 'Funcionário não encontrado ou já tem acesso vinculado' });
       }
 
       const nome = funcionarioCheck.rows[0].nome;
